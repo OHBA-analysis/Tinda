@@ -1,0 +1,32 @@
+function [cogdata,labels] = camcan_getCognitiveData(config)
+load('/Users/chiggins/Documents/CamCan/CogDatAll.mat');
+load(config.matfilelist);
+cogdata = zeros(600,16);
+for i=1:size(CogDatAll,1)
+    temp = strfind(mat_files_orth,num2str(CogDatAll(i,16)));
+    %temp = cell2mat(temp);
+    rowind = find(~cellfun(@isempty,temp));
+    if ~isempty(rowind)
+        cogdata(rowind,:) = CogDatAll(i,:);
+    end
+end
+
+% now labels; note the following:
+% 1) FldIn   : fluid intelligence           f   ex
+% 2) FacReg  : face recognition             f   emo
+% 3) EmoRec  : emotional recognition        f   emo
+% 4) MltTs   : multitask                    f   ex      (negatively correlated with others - indicates reaction times)
+% 5) PicName : picture naming               f   lang
+% 6) ProV    : proverb comprehension        c   lang
+% 7) MRSp    : motor speed                  f   mot     (negatively correlated with others - indicates reaction times) 
+% 8) MRCv    : motor speed varianve         f   mot
+% 9) SntRec  : sentence comprehension       c/f lang 
+% 10) VSTM   : visual short-term memory     f   mem
+% 11) StrRec : story recall                 f   mem
+% 12) StW    : spot the word                c   lang
+% 13) VrbFl  : verbal fluency               f   lang
+% col1: M/F; col2: age; cols3-15: cognitive measures; col16: CCID
+labels = {'Sex','Age','FldIn','FacReg','EmoRec','MltTs','PicName','ProV','MRSp','MRCv','SntRec',...
+    'VSTM','StrRec','StW','VrbFl','CCID'};
+
+end
