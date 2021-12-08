@@ -437,17 +437,3 @@ if whichstudy==4
     title(['Female group: rho=',num2str(R(2,1),2),',p=',num2str(P(2,1),1)])
 end
 
-
-%% Now just writing in comments the plan for remaining code:
-
-
-% next section should be characterising hierarchical structure, which
-% should go as follows:
-%
-% 1. 2nd level hmm metastate model fit
-% 2. cycle lengths vs time (ie first minute, second minute etc of scan)
-% 3. cycle lengths vs covariates:
-%       - HCP: twins vs non twins
-%       - HCP: comparison with fmri metrics
-
-

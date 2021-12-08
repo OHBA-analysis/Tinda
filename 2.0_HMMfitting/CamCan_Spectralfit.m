@@ -19,7 +19,7 @@ options_wt.order = 0;
 options_wt.embeddedlags = -7:7;
 d = length(options_wt.embeddedlags) - 1; 
 
-for i=337:length(mat_files_orth)
+for i=1:length(mat_files_orth)
     load(mat_files_orth{i});
     
     % get soft state timecourses:
