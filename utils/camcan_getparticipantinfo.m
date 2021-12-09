@@ -18,7 +18,7 @@ for i=1:653
     
 end
 % get RTs:
-fname = '/Users/chiggins/Documents/CamCan/RTsimple_summary.xlsx'
+fname = '/ohba/pi/mwoolrich/datasets/CamCan_2021/ParticipantCovariates/RTsimple_summary.xlsx'
 headerlines = 0;
 DATA = importdata(fname,' ',headerlines);
 for i=1:600

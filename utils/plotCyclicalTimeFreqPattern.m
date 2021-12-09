@@ -93,8 +93,8 @@ for inode=1:6
             display_surf_right = fullfile(osldir,'std_masks','ParcellationPilot.R.very_inflated.32k_fs_LR.surf.gii');
             display_surf_left = fullfile(osldir,'std_masks','ParcellationPilot.L.very_inflated.32k_fs_LR.surf.gii');
     end
-    runcmd('/Users/chiggins/.local/src/workbench/bin_macosx64/wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_right,output_right,interptype)
-     runcmd('/Users/chiggins/.local/src/workbench/bin_macosx64/wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_left,output_left,interptype)
+    runcmd('wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_right,output_right,interptype)
+     runcmd('wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_left,output_left,interptype)
 
     sl = gifti(display_surf_left);
     vl = gifti(output_left);

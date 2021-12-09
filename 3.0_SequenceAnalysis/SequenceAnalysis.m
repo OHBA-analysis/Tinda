@@ -1,11 +1,16 @@
 % script called to load viterbi paths inferred and hmm objects and run
 % post-hoc sequence analysis:
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda/'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
+
+home_dir = '/home/cgohil/matlab';
+
+addpath(genpath([home_dir '/Tinda/']));
+addpath(genpath([home_dir '/Higgins2020_Neuron/']));
+
 if ~exist('whichstudy','var')
-    whichstudy = 1; % 1 denotes the hmm model run in Higgins2020_neuron
+    whichstudy = 4; % see utils/getStudyDetails.m
 end
 config = getStudyDetails(whichstudy);
+
 % other preliminary setup for plotting etc:
 color_scheme = set1_cols();
 
@@ -16,6 +21,7 @@ if simtests
     config.figdir = strrep(config.figdir,['Study',int2str(whichstudy)],['Study',int2str(whichstudy),'_simtest']);
     mkdir(config.figdir);
 end
+
 %% part 1: Viterbi path assymetry analysis
 % first load data and plot basic temporal statistics:
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
@@ -54,7 +60,7 @@ elseif whichstudy==4
     for i=1:length(hmmT)    
         hmmT{i} = hmmT{i} - (length(hmm.train.embeddedlags)-1);
     end
-    load(config.matfilelist);
+    load(config.matfilelist); % loads mat_files_orth
 end
 clear temp vpath;
 
@@ -178,10 +184,6 @@ angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
 rotational_momentum = imag(sum(sum(angleplot.*hmm_1stlevel.FO_assym)));
 hmm_1stlevel.rotational_momentum = squeeze(rotational_momentum);
 
-
-
-
-
 %% plot as circular diagram:
 
 if whichstudy<4
@@ -261,7 +263,6 @@ print([config.figdir,'1ECyclicalpatterns_lessthan2.5sec'],'-dpng');
 
 hmm_1stlevel.FO_respcontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));
 
-
 % save metrics for later analysis:
 if exist(config.metricfile)
     save(config.metricfile,'hmm_1stlevel','-append');
@@ -292,7 +293,6 @@ else
     [P,f] = loadHMMspectra(config,whichstudy,hmm,hmm.subj_inds);
     
 end
-
 
 % %% temp sanity check: load random subject spectra:
 % i = randi(234);
@@ -360,8 +360,7 @@ print([config.figdir,'2BPSD_modes'],'-dpng');
 %% refit earlier spatial modes to camcan data:
 
 if whichstudy==4
-    MEGUKfolder = '/Users/chiggins/data/Neuron2020/CanonicalRS/250Hz/hmm_1to45hz/'
-    nnmffile_MEGUK = [MEGUKfolder,'nnmf_spatialfit.mat'];
+    nnmffile_MEGUK = '/ohba/pi/mwoolrich/datasets/CamCan_2021/neuron_nnmf_spatialfit.mat';
     load(nnmffile_MEGUK)
     
     opt = statset('maxiter',1);    
@@ -439,7 +438,6 @@ end
 
 
 %% Now just writing in comments the plan for remaining code:
-
 
 % next section should be characterising hierarchical structure, which
 % should go as follows:
