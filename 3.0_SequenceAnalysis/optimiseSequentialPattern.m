@@ -4,10 +4,17 @@ function bestseq = optimiseSequentialPattern(FO,optimalseqfile)
 % plot visualisation.
 %
 % we test different possible metrics:
-% sequence metric 1 is the 
+% sequence metric 1 is the mean FO assymetry
+% sequence metric 2 is the proportional FO assymetry (ie assymetry as a
+% proportion of a baseline - which is time spent in the state)
+% sequence metric 3 is the propotional FO assymetry using the global,
+% rather than subject-sepcific, baseline FO
+%
 
 metric{1} = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4));
-metric{2} = squeeze(mean((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3),4));
+temp = (FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3); % control for NANs where a state isn't visited
+temp(mean(FO,3)==0)=0;
+metric{2} = squeeze(mean(temp,4));
 metric{3} = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4)) ./ mean(FO(:,:,:),3);
 
 myperms = perms(1:10);
@@ -32,19 +39,10 @@ for i2=1:length(myperms)
             sequencemetric{i3}(i2,i) = imag(sum(sum(angleplot.*metric{i3})));
         end
         
-        % metric 2 maximises the one-step (ie local) FO difference:
-        for i3=1:3
-            temp = 0;
-            for k=1:11
-                temp = temp + metric{i3}(manualorder(k),manualorder(k+1)) - metric{i3}(manualorder(k+1),manualorder(k));
-            end
-            sequencemetric{3+i3}(i2,i) = sum(temp);
-        end
-        
-        % metric 3 
+       
     end
 end
-for i=1:9
+for i=1:3
     [~,m1] = max(max(abs(sequencemetric{i})));
     [~,m] = max(abs(sequencemetric{i}(:,m1)));
     trueseqmetric = sequencemetric{i}(m,m1);
