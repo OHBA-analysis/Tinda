@@ -1,4 +1,9 @@
 function [subjinfo,subjid] = camcan_getparticipantinfo(config)
+if isfolder('/Volumes/T5_OHBA')
+  basedir = '/Volumes/T5_OHBA/Projects/Tinda/';
+else
+  basedir = '/ohba/pi/mwoolrich/datasets/CamCan_2021/';
+end
 load(config.matfilelist);
 participantinfo = tdfread(config.participantfile);
 subjinfo = zeros(600,2);
@@ -13,12 +18,11 @@ for i=1:653
         subjinfo(rowind,3) = participantinfo.gender_code(i);
         subjinfo(rowind,4) = participantinfo.tiv_cubicmm(i);
         subjid{rowind} = participantinfo.participant_id(i,:);
-        
     end
     
 end
 % get RTs:
-fname = '/Users/chiggins/Documents/CamCan/RTsimple_summary.xlsx'
+fname = fullfile(basedir, 'ParticipantCovariates/RTsimple_summary.xlsx');
 headerlines = 0;
 DATA = importdata(fname,' ',headerlines);
 for i=1:600

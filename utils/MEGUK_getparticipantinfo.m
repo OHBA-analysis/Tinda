@@ -1,13 +1,16 @@
 function [info,labels] = MEGUK_getparticipantinfo()
-
-behav_dir = '/Users/chiggins/data/Neuron2020/CanonicalRS/PsychoMet_and_Info/';
+if isfolder('/Volumes/T5_OHBA/')
+  behav_dir = '/Users/matsvanes/Data/YunzheData/Neuron2020Analysis/CanonicalRS/PsychoMet_and_Info/';
+else
+  behav_dir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/PsychoMet_and_Info/';
+end
 %load('/Users/chiggins/data/Neuron2020/CanonicalRS/PsychoMet_and_Info/PsychoMetsandID.txt')
 
 M = dlmread([behav_dir,'PsychoMetsandID.txt'],' ',0,0);
 fname_subs = [behav_dir,'RS_subs.mat'];
 if ~isfile(fname_subs)
     % find the subjects that include eye_open:
-    workingdir = '/Volumes/CamsHD2/NottinghamRS/raw_data/';
+    workingdir = '/ohba/pi/mwoolrich/datasets/uk_meg_notts/uk_meg/raw_data/';
     datadir = workingdir;
 
     subjectdirs = dir([datadir '/3*']);

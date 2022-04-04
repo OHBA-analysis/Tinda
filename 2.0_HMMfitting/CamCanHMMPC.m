@@ -1,8 +1,13 @@
 % CamCam_HMM
-camcandir_matfiles = 'E:\CamCan_2021\HMM\matfiles\';
+if isfolder('/Volumes/T5_OHBA/')
+  basedir = '/Volumes/T5_OHBA/Projects/Tinda';
+else
+  basedir = '/ohba/pi/mwoolrich/datasets/CamCan_2021';
+end
+camcandir_matfiles = fullfile(basedir, 'HMM/matfiles/');
 if ~exist([camcandir_matfiles,'filelist.mat'])
     % save as matfiles:
-    camcandir = 'E:\CamCan_2021\MEGRS_signflippedorthogonalised\';
+    camcandir = fullfile(basedir,'MEGRS_signflippedOrthogonalised');
     files = dir(camcandir);
     clear to_keep;
     for i=1:length(files)
@@ -38,12 +43,15 @@ if ~exist([camcandir_matfiles,'filelist.mat'])
     save([camcandir_matfiles,'filelist'],'mat_files_orth','T_all');
 else
     load([camcandir_matfiles,'filelist'],'mat_files_orth','T_all');
+    for k=1:length(mat_files_orth)
+      mat_files_orth{k} = replace(mat_files_orth{k}, [basedir, '/HMM/matfiles/'], camcandir_matfiles);
+    end
 end
 %% and run HMM:
-dirnameHMM = 'E:\CamCan_2021\HMM\';
-for i=1:length(mat_files_orth)
-    mat_files_orth{i}(1)='E';
-end
+dirnameHMM = fullfile(basedir, 'HMM/');
+% for i=1:length(mat_files_orth)
+%     mat_files_orth{i}(1)='E';
+% end
 Nruns = 1;
 embeddedlag = 7; K = 12; Hz = 250; ndim = 38;
 

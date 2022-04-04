@@ -5,7 +5,7 @@ if whichstudy==1
     % this is the model run on Higgins2020_Neuron (ie on the MEG UK
     % partnership data of 55 subjects)
     config.nSj = 55;
-    config.hmmfolder = '/Users/chiggins/data/Neuron2020/CanonicalRS/250Hz/hmm_1to45hz/';
+    config.hmmfolder = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/';
     config.hmmfilename = 'hmm5_parc_giles_symmetric__pcdim80_voxelwise_embed14_K12_big1_dyn_modelhmm.mat';
     config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
     config.sample_rate = 250;
@@ -15,7 +15,7 @@ elseif whichstudy==2
     % HPF to eliminate any slow frequency waves that might be the sole
     % cause of the cyclical patterns observed
     config.nSj = 55;
-    config.hmmfolder = '/Users/chiggins/data/Neuron2020/CanonicalRS/250Hz/hmm_1to45hz/';
+    config.hmmfolder = '/ohba/pi/mwoolrich/datasets/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/';
     config.hmmfilename = 'hmm1highfreqonly_parc_giles_symmetric__pcdim80_voxelwise_embed14_K12_big1_dyn_modelhighfreqonly.mat';
     config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
     config.sample_rate = 250;
@@ -24,7 +24,7 @@ elseif whichstudy==2
 elseif whichstudy==3 
     % this is the best of five models run on HCP data
     config.nSj = 237/3;
-    config.hmmfolder = '/Volumes/CamsHD2/HCP_CH/ve_output_rest/';
+    config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
     config.hmmfilename = 'hmm_analysis2.mat';
     config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
     % note the parcellation needs to be reordered so labels match data:
@@ -43,28 +43,37 @@ elseif whichstudy==3
 %    config.Poiss_dir
     
 elseif whichstudy==4 % this the CamCan model fit:
+  if isfolder('/Volumes/T5_OHBA/')
+    basedir='/Volumes/T5_OHBA/Projects/Tinda';
+  else
+    basedir='/ohba/pi/mwoolrich/datasets/CamCan_2021';
+  end
     config.nSj = 600;
-    config.hmmfolder = '/Volumes/CamsHD2/CamCan_2021/HMM/';
+    config.hmmfolder = fullfile(basedir, 'HMM/');
     config.hmmfilename = 'hmm_analysis1.mat';
     config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
     config.sample_rate = 250;
     %config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
-    config.matfilelist = '/Volumes/CamsHD2/CamCan_2021/HMM/matfiles/filelist.mat';
-    config.participantfile = '/Users/chiggins/Documents/CamCan/participants.tsv';
-    config.secondlevelmodelfile = '/Volumes/CamsHD2/CamCan_2021/HMM/secondLevelHMM_Poiss_window17_K3.mat';
-    config.Poiss_dir = '/Volumes/CamsHD2/CamCan_2021/HMM/Poissdata_125_overlappingWindows/';
+    config.matfilelist = fullfiel(basedir, 'HMM/matfiles/filelist.mat');
+    config.participantfile = fullfile(basedir, 'ParticipantCovariates/participants.tsv');
+    config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
+    config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
 elseif whichstudy==5 % this refers to the HCP task epochs
     config.nSj = 237/3;
-    config.hmmfolder = '/Volumes/CamsHD2/HCP_CH/ve_output_rest/';
+    config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
     config.hmmfilename = 'hmm_analysis2.mat';
     config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
-    config.wrkmemdir = '/Volumes/CamsHD2/HCP_CH/ve_output_Wrkmem_matfiles/';
-    config.wrkmemfilelist = '/Volumes/CamsHD2/HCP_CH/ve_output_Wrkmem_matfiles/filelist.mat';
-    config.storymdir = '/Volumes/CamsHD2/HCP_CH/ve_output_StoryM_matfiles/';
-    config.storymfilelist = '/Volumes/CamsHD2/HCP_CH/ve_output_StoryM_matfiles/filelist.mat';
+    config.wrkmemdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/';
+    config.wrkmemfilelist = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/filelist.mat';
+    config.storymdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/';
+    config.storymfilelist = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/filelist.mat';
 end
 % generic output directories:
-config.figdir = ['/Users/chiggins/Google Drive/Doctoral Files/3.0 Experimental Work/8.0SequentialPatterns/Study',int2str(whichstudy),'/'];
+if isfolder('/Volumes/T5_OHBA/')
+  config.figdir = ['/Volumes/T5_OHBA/Projects/Tinda/Study',int2str(whichstudy),'/'];
+else
+  config.figdir = ['/ohba/pi/mwoolrich/mvanes/analysis/SequentialPatterns/Study',int2str(whichstudy),'/'];
+end
 if ~isfolder(config.figdir)
     mkdir(config.figdir)
 end

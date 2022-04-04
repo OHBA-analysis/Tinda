@@ -1,6 +1,7 @@
 function [info,headers] = HCP_getparticipantinfo(config)
-    subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
-    temp = readtable('/Users/chiggins/data/HCPAnalysis/behav/MEGfnames.csv');
+basedir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis';
+    subjdata = readtable(fullfile(basedir, 'behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv'));
+    temp = readtable(fullfile(basedir, 'behav/MEGfnames.csv'));
     subj_ids = [];
     for i=1:size(temp,1)
         subj_id = str2num(temp{i,1}{1}(7:12));
@@ -16,10 +17,10 @@ function [info,headers] = HCP_getparticipantinfo(config)
     subjdata = subjdata(inds,:);
 
     % also load more detailed data and align:
-    subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
+    subjdata_detailed = readtable(fullfile(basedir, 'behav/vars.txt'));
     %headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
     clear headers;
-    fid = fopen('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
+    fid = fopen(fullfile(basedir,'behav/column_headers.txt'));
     tline = fgetl(fid);
     i=1;
     while ischar(tline)

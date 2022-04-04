@@ -1,5 +1,5 @@
 function [cogdata,labels] = camcan_getCognitiveData(config)
-load('/Users/chiggins/Documents/CamCan/CogDatAll.mat');
+load('/ohba/pi/mwoolrich/datasets/CamCan_2021/ParticipantCovariates/CogDatAll.mat');
 load(config.matfilelist);
 cogdata = zeros(600,16);
 for i=1:size(CogDatAll,1)
