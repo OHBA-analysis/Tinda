@@ -4,7 +4,11 @@ function bestseq = optimiseSequentialPattern(FO,optimalseqfile)
 % plot visualisation.
 %
 % we test different possible metrics:
-% sequence metric 1 is the 
+% sequence metric 1 is the group average direction. 
+% sequence metric 2 is the average subject assymmetry (i.e. average of the
+% normalized subject direction)
+% sequence metric 3 is the group average assymmetry (i.e. metric 1
+% normalized by the mean over all subjects
 
 metric{1} = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4));
 metric{2} = squeeze(mean((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3),4));
