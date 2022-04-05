@@ -54,7 +54,7 @@ elseif whichstudy==4 % this the CamCan model fit:
     config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
     config.sample_rate = 250;
     %config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
-    config.matfilelist = fullfiel(basedir, 'HMM/matfiles/filelist.mat');
+    config.matfilelist = fullfile(basedir, 'HMM/matfiles/filelist.mat');
     config.participantfile = fullfile(basedir, 'ParticipantCovariates/participants.tsv');
     config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
     config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
