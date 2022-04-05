@@ -5,7 +5,7 @@ if nargin<1
     error('Need ordering of states to plot')
 end
 K = length(ordering);
-
+clock=[12,1,2,3,11,4,10,5,7,9,6,8];
 if nargin<4
     color_scheme = set1_cols;
 end
@@ -44,23 +44,29 @@ for ik1=1:K
     end
 end
 for ik=1:K
+%     scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
+%         'MarkerFaceColor',color_scheme{ik},'MarkerEdgeColor',color_scheme{ik}); 
     scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
-        'MarkerFaceColor',color_scheme{ik},'MarkerEdgeColor',color_scheme{ik}); 
+        'MarkerFaceColor',[1 1 1],'MarkerEdgeColor','k'); 
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1.MarkerFaceAlpha = 1;%.75;
     if ik==10
-        scatter1 = scatter(disttoplot_manual(ik-1,1),disttoplot_manual(ik-1,2),400,...
-        'MarkerFaceColor',color_scheme{ik-1},'MarkerEdgeColor',color_scheme{ik-1}); 
-        hold on
+%         scatter1 = scatter(disttoplot_manual(ik-1,1),disttoplot_manual(ik-1,2),400,...
+%         'MarkerFaceColor',color_scheme{ik-1},'MarkerEdgeColor',color_scheme{ik-1}); 
+    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
+        'MarkerFaceColor',[1 1 1],'MarkerEdgeColor','k');         
+    hold on
         % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
         scatter1.MarkerFaceAlpha = 0.5;
         text(disttoplot_manual(ik-1,1)-0.03,disttoplot_manual(ik-1,2),int2str(ik-1),'FontSize',12,'FontWeight','bold');hold on;
     end
     if ik<10
-        text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
+%         text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
+        text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(clock(ik)),'FontSize',12,'FontWeight','bold');hold on;
     else
-        text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
+%         text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
+text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(clock(ik)),'FontSize',12,'FontWeight','bold');hold on;
     end
 end
 axis square
