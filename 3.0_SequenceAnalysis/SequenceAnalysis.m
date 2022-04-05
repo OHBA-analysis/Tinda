@@ -1,9 +1,7 @@
 % script called to load viterbi paths inferred and hmm objects and run
 % post-hoc sequence analysis:
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda/'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
 if ~exist('whichstudy','var')
-    whichstudy = 1; % 1 denotes the hmm model run in Higgins2020_neuron
+    whichstudy = 4; % 1 denotes the hmm model run in Higgins2020_neuron
 end
 config = getStudyDetails(whichstudy);
 % other preliminary setup for plotting etc:
@@ -67,7 +65,7 @@ opts = [];
 opts.K = 12;
 opts.Fs = config.sample_rate;
 for subnum=1:config.nSj
-    fprintf(['\nPorcessing subj ',int2str(subnum)]);
+    fprintf(['\nProcessing subj ',int2str(subnum)]);
     if whichstudy~=4
         vpath{subnum} = hmm.statepath(hmm.subj_inds==subnum);
     else
