@@ -1,7 +1,5 @@
 % this script fits a second level sequential HMM to an already inferred
 % viterbi path sequence
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda/'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
 if ~exist('whichstudy','var')
     whichstudy = 1; % 1 denotes the hmm model run in Higgins2020_neuron
 end
