@@ -4,8 +4,6 @@
 %% compare to single state FO:
 % script called to load viterbi paths inferred and hmm objects and run
 % post-hoc sequence analysis:
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
 if ~exist('whichstudy','var')
     whichstudy = 4; % 4 denotes camcan data
 end
@@ -101,7 +99,6 @@ info = camcan_getparticipantinfo(config);
 
 load(config.secondlevelmodelfile)
 windowlength = 125;
-config.Poiss_dir = ['/Volumes/CamsHD2/CamCan_2021/HMM/Poissdata_',int2str(windowlength),'_overlappingWindows/'];
 
 %%
 if ~contains(config.Poiss_dir,'overlappingWindows')
@@ -321,7 +318,7 @@ title(['Full model: p=',num2str(stats(3))]);
 print([figdir,'4D_fullregressionmodel'],'-dpng');
 
 %% try cardio measures correlation:
-fname = '/Users/chiggins/Documents/CamCan/CardioMeasures_summary.xlsx'
+fname = [config.participantcovariates, '/CardioMeasures_summary.xlsx'];
 headerlines = 0;
 DATA = importdata(fname,' ',headerlines);
 [info,subjid] = camcan_getparticipantinfo(config);
@@ -352,7 +349,7 @@ for k=1:3
 end
 print([figdir,'4E_Cardiac'],'-dpng');
 %% load simple reaction time measure:
-fname = '/Users/chiggins/Documents/CamCan/RTsimple_summary.xlsx'
+fname = [config.participantcovariates, 'RTsimple_summary.xlsx'];
 headerlines = 0;
 DATA = importdata(fname,' ',headerlines);
 [info,subjid] = camcan_getparticipantinfo(config);

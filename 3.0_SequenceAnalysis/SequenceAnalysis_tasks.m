@@ -4,10 +4,8 @@
 % to the inferred task structure?
 
 clear all;
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda/'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
 whichstudy = 5; % this flags the HCP task data
-config = getStudyDetails(whichstudy)
+config = getStudyDetails(whichstudy);
 
 % other preliminary setup for plotting etc:
 color_scheme = set1_cols();
@@ -46,7 +44,7 @@ end
 % subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
 % subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
 % headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
-temp = readtable('/Users/chiggins/data/HCPAnalysis/behav/MEGfnames.csv');
+temp = readtable('/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav');
 subj_ids = [];
 for i=1:size(temp,1)
     subj_id = str2num(temp{i,1}{1}(7:12));
@@ -106,7 +104,7 @@ bonf_ncomparisons = hmm.K.^2-hmm.K;
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
-optimalseqfile = ['/Volumes/CamsHD2/HCP_CH/ve_output_rest/','bestseq',int2str(3),'.mat'];
+optimalseqfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/','bestseq',int2str(3),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
@@ -134,7 +132,7 @@ end
 % subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
 % subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
 % headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
-temp = readtable('/Users/chiggins/data/HCPAnalysis/behav/MEGfnames.csv');
+temp = readtable('/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/MEGfnames.csv');
 subj_ids = [];
 for i=1:size(temp,1)
     subj_id = str2num(temp{i,1}{1}(7:12));
@@ -194,7 +192,7 @@ mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
 
-optimalseqfile = ['/Volumes/CamsHD2/HCP_CH/ve_output_rest/','bestseq',int2str(3),'.mat'];
+optimalseqfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/','bestseq',int2str(3),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
@@ -221,7 +219,7 @@ end
 % subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
 % subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
 % headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
-temp = readtable('/Users/chiggins/data/HCPAnalysis/behav/MEGfnames.csv');
+temp = readtable('/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/MEGfnames.csv');
 subj_ids = [];
 for i=1:size(temp,1)
     subj_id = str2num(temp{i,1}{1}(7:12));
@@ -282,7 +280,7 @@ mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
 
-optimalseqfile = ['/Volumes/CamsHD2/HCP_CH/ve_output_rest/','bestseq',int2str(3),'.mat'];
+optimalseqfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/','bestseq',int2str(3),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));

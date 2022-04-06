@@ -26,7 +26,9 @@ elseif whichstudy==3
     config.nSj = 237/3;
     config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
     config.hmmfilename = 'hmm_analysis2.mat';
+    config.participantcovariates = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/';
     config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
+    config.fmri_metastates = '/ohba/pi/mwoolrich/mvanes/analysis/HCP/Diegov/';
     % note the parcellation needs to be reordered so labels match data:
 %     reordering = readtable('/Users/chiggins/Documents/MATLAB/rs-mvar-scripts/aal_cortical_details.csv');
 %     reordering = table2array(reordering(:,5))+1; % the +1 converts from python 0 indexing
@@ -55,6 +57,7 @@ elseif whichstudy==4 % this the CamCan model fit:
     config.sample_rate = 250;
     %config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
     config.matfilelist = fullfile(basedir, 'HMM/matfiles/filelist.mat');
+    config.participantcovariates = fullfile(basedir, 'ParticipantCovariates/');
     config.participantfile = fullfile(basedir, 'ParticipantCovariates/participants.tsv');
     config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
     config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');

@@ -1,9 +1,5 @@
 % HCP correlations:
 
-% load data:
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Tinda/'));
-addpath(genpath('/Users/chiggins/Documents/MATLAB/Neuron2020/'));
-
 whichstudy = 3;
 config = getStudyDetails(whichstudy);
 
@@ -22,8 +18,8 @@ load(config.metricfile);
 
 %% Load HCP participant info:
 
-subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
-temp = readtable('/Users/chiggins/data/HCPAnalysis/behav/MEGfnames.csv');
+subjdata = readtable([config.participantcovariates, 'unrestricted_aquinn501_4_7_2017_9_4_13.csv']);
+temp = readtable([config.participantcovariates, 'MEGfnames.csv']);
 subj_ids = [];
 for i=1:size(temp,1)
     subj_id = str2num(temp{i,1}{1}(7:12));
@@ -40,10 +36,10 @@ subjdata = subjdata(inds,:);
 
 % also load more detailed data and align:
 
-subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
+subjdata_detailed = readtable([config.participantcovariates, 'vars.txt']);
 %headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
 clear headers;
-fid = fopen('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
+fid = fopen([config.participantcovariates, 'column_headers.txt']);
 tline = fgetl(fid);
 i=1;
 while ischar(tline)
@@ -63,7 +59,7 @@ subjdata_detailed.Properties.VariableNames = headers;
 
 %%
 
-twindata = readmatrix('/Users/chiggins/data/HCPAnalysis/behav/twins.txt');
+twindata = readmatrix([config.participantcovariates, 'twins.txt']);
 twinmask = false(size(twindata,1),1);
 for i=2:size(twindata)
     if ismember(twindata(1,i),subj_ids)
@@ -142,7 +138,7 @@ anova1(cyctimediffmat(~outliers & selected),grouplabs(~outliers& selected))
 
 %% Look at corrrelation with Diego's fMRI metastates:
 
-temp = load('/Users/chiggins/data/Diegov/BigHMM_820_uniqueP1_K12_mean.mat');
+temp = load([config.fmri_metastates, 'BigHMM_820_uniqueP1_K12_mean.mat']);
 
 temp3 = reshape(temp.BigGamma,4800,820,12);
 temp4 = squeeze(mean(temp3,1));
@@ -154,7 +150,6 @@ FOcorr = corr(temp4);
 [a,b] = pca(temp4,'NumComponents',2);
 %figure();scatter(b(:,1),b(:,2),'filled')
 
-addpath(genpath('/Users/chiggins/Documents/MATLAB/FSLNets'));
 [A1,B1] = nets_hierarchy(FOcorr,FOcorr,1:12,'');
 set(gcf,'Position',[337 350 477 388]);
 % manually set ordering from Diego's paper:
@@ -165,7 +160,7 @@ print([config.figdir,'3AfMRIClustersFromDiegosPaper'],'-dpng');
 figure();scatter(b(:,1),b(:,2),'filled')
 
 NoFamilyInfo = [108525, 116322, 146331, 168240, 256540, 280941, 524135, 604537, 657659, 867468];
-vars = dlmread('/Users/chiggins/data/Diegov/scripts900/vars.txt',' ');
+vars = dlmread([config.fmri_metastates, 'scripts900/vars.txt'],' ');
 %Drop = false(N,1);
 %for n = NoFamilyInfo, Drop(vars(:,1)==n) = true; end
 %vars = vars(~Drop,:);
@@ -206,7 +201,6 @@ FOcorr2 = corr(temp4');
 %imagesc(FOcorr)
 
 
-addpath(genpath('/Users/chiggins/Documents/MATLAB/FSLNets'));
 [A1,B1] = nets_hierarchy(FOcorr2,FOcorr2,[1:820],'');
 
 % manually extract cluster division:
