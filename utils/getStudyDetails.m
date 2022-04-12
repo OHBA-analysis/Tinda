@@ -66,6 +66,7 @@ elseif whichstudy==5 % this refers to the HCP task epochs
     config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
     config.hmmfilename = 'hmm_analysis2.mat';
     config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
+    config.participantcovariates = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/';
     config.wrkmemdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/';
     config.wrkmemfilelist = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/filelist.mat';
     config.storymdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/';
