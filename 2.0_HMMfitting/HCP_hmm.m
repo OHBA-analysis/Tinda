@@ -1,7 +1,5 @@
 % this the script to run on the October 2021 preprocced data:
 
-addpath(genpath('C:\Users\chiggins\Google Drive\MATLAB\8.0 Sequential RSNs'));
-
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';
 dirname = 'G:\HCP_CH\ve_output_rest\'
 dirname_matfiles = 'G:\HCP_CH\ve_output_rest_matfiles\'
