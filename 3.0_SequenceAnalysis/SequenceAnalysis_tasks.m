@@ -40,11 +40,13 @@ else
     load(config.wrkmemfilelist,'mat_files_orth');
 end
 
+hastaskdata = false(config.nSj,1);
+embeddedlength = 14;
+
 % go through subjects, loading evoked responses:
-% subjdata = readtable('/Users/chiggins/data/HCPAnalysis/behav/unrestricted_aquinn501_4_7_2017_9_4_13.csv');
-% subjdata_detailed = readtable('/Users/chiggins/data/HCPAnalysis/behav/vars.txt');
-% headers = readtable('/Users/chiggins/data/HCPAnalysis/behav/column_headers.txt');
-temp = readtable('/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav');
+subjdata = readtable([config.participantcovariates, 'unrestricted_aquinn501_4_7_2017_9_4_13.csv']);
+subjdata_detailed = readtable([config.participantcovariates, 'vars.txt']);
+temp = readtable([config.participantcovariates, 'MEGfnames.csv']);
 subj_ids = [];
 for i=1:size(temp,1)
     subj_id = str2num(temp{i,1}{1}(7:12));
@@ -52,14 +54,33 @@ for i=1:size(temp,1)
         subj_ids = [subj_ids;subj_id];
     end
 end
+clear headers;
+fid = fopen([config.participantcovariates, 'column_headers.txt']);
+tline = fgetl(fid);
+i=1;
+while ischar(tline)
+    temp = strrep(tline,' ','');
+    temp = strrep(temp,'-','');
+    headers{i,1} = temp;
+    tline = fgetl(fid);i=i+1;
+end
+fclose(fid);
+inds = [];
+for i=1:length(subj_ids)
+    inds(i) = find(subjdata_detailed.Var1 == subj_ids(i));
+end
+subjdata_detailed = subjdata_detailed(inds,:);
+subjdata_detailed.Properties.VariableNames = headers;
+subjdata_detailed=subjdata_detailed(hastaskdata==1,:);
 
-hastaskdata = false(config.nSj,1);
-embeddedlength = 14;
+
 
 t = 7/250:1/250:4;
 t = t(1:946);
 t = t-1.5; % 1.5 seconds is image onset
 t_ofinterest = t>-0.5 & t<1;
+idx_t0 = find(t_ofinterest);
+idx_t0 = idx_t0(nearest(t,0));
 gam_evoked_sj = zeros(946,hmm.K,length(FO_sj));
 for i=1:length(FO_sj)
     taskfiles = false(config.nSj,1);
@@ -70,22 +91,32 @@ for i=1:length(FO_sj)
     if hastaskdata(i)
         to_analyse = find(taskfiles);
         gamtask = [];
+        trialonset{i}=[];
         for i2=1:length(to_analyse)
             temp = load(mat_files_orth{to_analyse(i2)});
             if length(unique(temp.T))>1
                 error('Epochs not uniformly sized')
             end
             gamtask = cat(2,gamtask,reshape(temp.Gamma_task,(temp.T(1)-embeddedlength),length(temp.T),hmm.K));
+            trialonset{i} = cat(2, trialonset{i}, reshape(zeros(length(temp.Gamma_task),1),(temp.T(1)-embeddedlength),length(temp.T)));
         end
+        trialonset{i}(idx_t0,:)=1;
+        trialonset{i} = reshape(trialonset{i}, [], 1);
+        
         for k=1:hmm.K
             gam_evoked_sj(:,k,i) = mean(gamtask(:,:,k) - FO_sj(i,k),2);
         end
         temp = reshape(gamtask(t_ofinterest,:,:),sum(t_ofinterest)*size(gamtask,2),hmm.K);
         [~,vpath_task{i}] = max(temp,[],2);
+        [~,vpath_task_long{i}] = max(reshape(gamtask, [], hmm.K),[],2);
+        vpath_evoked{i} = reshape(vpath_task{i}, sum(t_ofinterest), size(gamtask,2));
         T_all_task{i} = sum(t_ofinterest) * ones(size(gamtask,2),1);
     end
 end
+trialonset=trialonset(hastaskdata);
+vpath_task_long = vpath_task_long(hastaskdata);
 vpath_task = vpath_task(hastaskdata);
+vpath_evoked = vpath_evoked(hastaskdata);
 T_all_task = T_all_task(hastaskdata);
 gam_evoked_sj = gam_evoked_sj(:,:,hastaskdata);
  % this the epoch length of interest
@@ -104,13 +135,28 @@ bonf_ncomparisons = hmm.K.^2-hmm.K;
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
-optimalseqfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/','bestseq',int2str(3),'.mat'];
+optimalseqfile = [config.hmmfolder,'bestseq',int2str(3),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf()
 print([config.figdir,'FigB_WrkMemSequencePlot'],'-dpng');
 
+for i=1:length(vpath_evoked)
+    vpathcircle{i}= getCircleVpath(vpath_evoked{i}, bestseq);
+    
+    vpathcircle_task_long{i} = getCircleVpath(vpath_task_long{i}, bestseq);
+    
+    % do Fourier analysis on the circle vpath and epoch
+    [tmp, circlefreq_evoked, circletime_evoked] = fourieranalysis_circleVpath(vpathcircle_task_long{i}, trialonset{i});
+    circlepow_evoked(i,:,:) = squeeze(nanmean(abs(tmp).^2));
+    circlespctrm_evoked(i,:,:) = squeeze(nanmean(spctrm));
+end
+
+figure; plot(circlefreq_evoked, nanmean(circlepow_evoked,3)), hold on, plot(circlefreq_evoked, nanmean(nanmean(circlepow_evoked,3)), 'k', 'LineWidth', 2) 
+title({'Circle vpath PSD per subject, WorkMem task', sprintf('trial length %g sec (%g Hz)', round(unique(diff(onsetidx))/250,4), round(1/(unique(diff(onsetidx))/250),2))});
+ylabel('PSD'), xlabel('Frequency (Hz)')
+print([config.figdir,'WrkMemCircleFreq'],'-dpng');
 
 %% Task 2: StoryMath task
 % extract file structure:
