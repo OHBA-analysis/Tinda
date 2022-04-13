@@ -27,8 +27,11 @@ freq=f.freq;
 onsetidx = find(trialonset==1);
 W=1;
 time = -W:timres:W;
-spctrm = nan(length(onsetidx), length(dat.label), length(f.freq), length(time));
 for k=1:length(onsetidx)
-    idx = nearest(f.time, dat.time(onsetidx(k)));
-    spctrm(k,:,:,:) = squeeze(f.fourierspctrm(1,:,:,idx-W/timres:idx+W/timres));
+    idx(k) = nearest(f.time, dat.time(onsetidx(k)));
+end
+idx(idx<=W/timres)=[];
+spctrm = nan(length(idx), length(dat.label), length(f.freq), length(time));
+for k=1:length(idx)
+        spctrm(k,:,:,:) = squeeze(f.fourierspctrm(1,:,:,idx(k)-W/timres:idx(k)+W/timres));
 end
