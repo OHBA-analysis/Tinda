@@ -109,14 +109,13 @@ for i=1:length(FO_sj)
         temp = reshape(gamtask(t_ofinterest,:,:),sum(t_ofinterest)*size(gamtask,2),hmm.K);
         [~,vpath_task{i}] = max(temp,[],2);
         [~,vpath_task_long{i}] = max(reshape(gamtask, [], hmm.K),[],2);
-        vpath_evoked{i} = reshape(vpath_task{i}, sum(t_ofinterest), size(gamtask,2));
+%         vpath_evoked{i} = reshape(vpath_task{i}, sum(t_ofinterest), size(gamtask,2));
         T_all_task{i} = sum(t_ofinterest) * ones(size(gamtask,2),1);
     end
 end
 trialonset=trialonset(hastaskdata);
 vpath_task_long = vpath_task_long(hastaskdata);
 vpath_task = vpath_task(hastaskdata);
-vpath_evoked = vpath_evoked(hastaskdata);
 T_all_task = T_all_task(hastaskdata);
 gam_evoked_sj = gam_evoked_sj(:,:,hastaskdata);
  % this the epoch length of interest
@@ -190,12 +189,13 @@ end
 hastaskdata = false(config.nSj,1);
 embeddedlength = 14;
 
-
-gam_evoked_sj = zeros(1306,hmm.K,length(FO_sj));
+nsamples=1306;
+gam_evoked_sj = zeros(nsamples,hmm.K,length(FO_sj));
 t = 7/250:1/250:8;
 t = t(1:1306);
-%t = t-1.5; % 1.5 seconds is image onset
 t_ofinterest = t>0.75 & t<2.75;
+idx_t0 = find(t_ofinterest);
+idx_t0 = idx_t0(nearest(t,0));
 for i=1:length(FO_sj)
     taskfiles = false(config.nSj,1);
     for i2=1:length(mat_files_orth)
@@ -205,27 +205,37 @@ for i=1:length(FO_sj)
     if hastaskdata(i)
         to_analyse = find(taskfiles);
         gamtask = [];
+        trialonset{i}=[];
         for i2=1:length(to_analyse)
             temp = load(mat_files_orth{to_analyse(i2)});
             if length(unique(temp.T))>1
                 error('Epochs not uniformly sized')
             end
             gamtask = cat(2,gamtask,reshape(temp.Gamma_task,(temp.T(1)-embeddedlength),length(temp.T),hmm.K));
+            trialonset{i} = cat(2, trialonset{i}, reshape(zeros(length(temp.Gamma_task),1),(temp.T(1)-embeddedlength),length(temp.T)));
         end
+        trialonset{i}(idx_t0,:)=1;
+        trialonset{i} = reshape(trialonset{i}, [], 1);
         for k=1:hmm.K
             gam_evoked_sj(:,k,i) = mean(gamtask(:,:,k) - FO_sj(i,k),2);
         end
         temp = reshape(gamtask(t_ofinterest,:,:),sum(t_ofinterest)*size(gamtask,2),hmm.K);
         [~,vpath_task{i}] = max(temp,[],2);
+        [~,vpath_task_long{i}] = max(reshape(gamtask, [], hmm.K),[],2);
         T_all_task{i} = sum(t_ofinterest) * ones(size(gamtask,2),1);
     end
 end
+trialonset = trialonset(hastaskdata);
 gam_evoked_sj = gam_evoked_sj(:,:,hastaskdata);
  % this the epoch length of interest
 gam_evoked_sj = gam_evoked_sj(t_ofinterest,:,:);
 t = t(t_ofinterest);
 vpath_task = vpath_task(hastaskdata);
+vpath_task_long = vpath_task_long(hastaskdata);
 T_all_task = T_all_task(hastaskdata);
+
+%%
+
 plotEvokedStateDist(gam_evoked_sj,t)
 xlim([min(t),max(t)]);
 print([config.figdir,'FigC_StoryMEvokedResponse1'],'-dpng');
@@ -238,12 +248,29 @@ mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
 
-optimalseqfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/','bestseq',int2str(3),'.mat'];
+optimalseqfile = [config.hmmfolder,'bestseq',int2str(3),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
-print([config.figdir,'FigD_WrkMemSequencePlot'],'-dpng');
+print([config.figdir,'FigD_StoryMSequencePlot'],'-dpng');
+
+% Circle Vpath analysis
+for i=1:length(vpath_evoked)
+    vpathcircle{i}= getCircleVpath(vpath_evoked{i}, bestseq);
+    
+    vpathcircle_task_long{i} = getCircleVpath(vpath_task_long{i}, bestseq);
+    
+    % do Fourier analysis on the circle vpath and epoch
+    [tmp, circlefreq_evoked, circletime_evoked] = fourieranalysis_circleVpath(vpathcircle_task_long{i}, trialonset{i});
+    circlepow_evoked(i,:,:) = squeeze(nanmean(abs(tmp).^2));
+    circlespctrm_evoked(i,:,:) = squeeze(nanmean(spctrm));
+end
+
+figure; plot(circlefreq_evoked, nanmean(circlepow_evoked,3)), hold on, plot(circlefreq_evoked, nanmean(nanmean(circlepow_evoked,3)), 'k', 'LineWidth', 2) 
+title({'Circle vpath PSD per subject, StoryMath task', sprintf('trial length %g sec (%g Hz)', round(nsamples/250,4), round(1/(nsamples/250),2))});
+ylabel('PSD'), xlabel('Frequency (Hz)')
+print([config.figdir,'StoryMCircleFreq'],'-dpng');
 
 %% Task 3: StoryMath task 2
 % extract file structure:
