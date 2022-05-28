@@ -1,3 +1,6 @@
+% Note: on shared drive this analysis is saved in directory HCP_CH_2022
+
+
 % this the script to run on the October 2021 preprocced data:
 
 addpath(genpath('C:\Users\chiggins\Google Drive\MATLAB\8.0 Sequential RSNs'));

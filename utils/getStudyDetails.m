@@ -69,4 +69,5 @@ if ~isfolder(config.figdir)
     mkdir(config.figdir)
 end
 config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+config.metricfile_gauss = [config.hmmfolder,'HMM_gauss_summarymetrics.mat'];
 end

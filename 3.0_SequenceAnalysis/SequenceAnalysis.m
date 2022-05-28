@@ -67,7 +67,7 @@ opts = [];
 opts.K = 12;
 opts.Fs = config.sample_rate;
 for subnum=1:config.nSj
-    fprintf(['\nPorcessing subj ',int2str(subnum)]);
+    fprintf(['\nProcessing subj ',int2str(subnum)]);
     if whichstudy~=4
         vpath{subnum} = hmm.statepath(hmm.subj_inds==subnum);
     else
@@ -183,13 +183,15 @@ hmm_1stlevel.rotational_momentum = squeeze(rotational_momentum);
 
 
 %% plot as circular diagram:
-
+bestseq = bestsequencemetrics{1};
 if whichstudy<4
-    cyclicalstateplot(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons));
+    cyclicalstateplot(bestseq,mean_direction,pvals<(0.005/bonf_ncomparisons));
 else
-    cyclicalstateplot(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons));
+    cyclicalstateplot(bestseq,mean_direction,pvals<0.000000001*(0.05/bonf_ncomparisons));
 end
 print([config.figdir,'1A_Cyclicalpattern'],'-dpng');
+print([config.figdir,'1A_Cyclicalpattern'],'-depsc');
+print([config.figdir,'1A_Cyclicalpattern'],'-dsvg');
 
 %% or plot as multiple individual state plots:
 if whichstudy<4

@@ -35,11 +35,12 @@ elseif whichstudy==3
     end
     hmm.subj_inds = ceil(hmm.subj_inds/3); % account for multiple runs per subj
     hmmTold = reshape(hmmT,3,config.nSj);
-    hmmTsubj = cell(config.nSj);
+    hmmTsubj = cell(config.nSj,1);
     for i=1:config.nSj
         hmmTsubj{i} = [hmmTold{1,i},hmmTold{2,i},hmmTold{3,i}]-(length(hmm.train.embeddedlags)-1);
     end
     hmmT = hmmTsubj;
+    
     clear hmmTsubj hmmTold;
 elseif whichstudy==4
     hmmT = temp.T_all;
@@ -135,6 +136,9 @@ for iSj=1:config.nSj
         mat_files_poiss{iSj} = [config.hmmfolder,'Poissdata_',int2str(W),overlapstring,'/PoissDataSj',int2str(iSj)];
         X = X_poiss;
         T = T_poiss;
+        if exist(mat_files_poiss{iSj})
+            error('careful - about to overwrite files containing STC info!')
+        end
         save(mat_files_poiss{iSj},'X','T');
     end
 end
@@ -175,12 +179,11 @@ options.distribution = 'poisson';
 options.Pstructure = eye(options.K) + diag(ones(1,options.K-1),1);
 options.Pstructure(options.K,1) = 1;
 options.initrep = 4; % this the number of parallel cores
+options.useParallel = false;
 
 % NOTE: initialisation is shite - winds up with states that are extremely
 % rarely on. just do random init here:
 
-%options.Gamma = rand(T_poiss(iSj),options.K);
-%options.DirichletDiag = sum(T_poiss);
 Sjs_init = randperm(config.nSj,30);
 if whichstudy<4
     X_init = []; T_init = [];
@@ -482,3 +485,5 @@ if exist(config.metricfile)
 else
     save(config.metricfile,'hmm_2ndlevel')
 end
+
+
