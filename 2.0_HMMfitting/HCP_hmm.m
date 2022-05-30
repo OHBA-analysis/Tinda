@@ -22,7 +22,7 @@ filenames = filenames(hdf5files);
 clear fnamepart T_all
 %% orthogonalise data and store as mat files:
 clear mat_files T_all
-for i=1:50%length(filenames)
+for i=1:length(filenames)
     fnamepart{i} = filenames(i).name;
     fname = [dirname,fnamepart{i}];
     X = h5read(fname,'/data');

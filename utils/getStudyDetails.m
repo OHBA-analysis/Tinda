@@ -62,6 +62,7 @@ elseif whichstudy==5 % this refers to the HCP task epochs
     config.wrkmemfilelist = '/Volumes/CamsHD2/HCP_CH/ve_output_Wrkmem_matfiles/filelist.mat';
     config.storymdir = '/Volumes/CamsHD2/HCP_CH/ve_output_StoryM_matfiles/';
     config.storymfilelist = '/Volumes/CamsHD2/HCP_CH/ve_output_StoryM_matfiles/filelist.mat';
+    config.sample_rate = 240;
 end
 % generic output directories:
 config.figdir = ['/Users/chiggins/Google Drive/Doctoral Files/3.0 Experimental Work/8.0SequentialPatterns/Study',int2str(whichstudy),'/'];
