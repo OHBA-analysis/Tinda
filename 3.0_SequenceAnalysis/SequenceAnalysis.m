@@ -53,6 +53,13 @@ elseif whichstudy==4
         hmmT{i} = hmmT{i} - (length(hmm.train.embeddedlags)-1);
     end
     load(config.matfilelist);
+    if ~isfolder(mat_files_orth{1})
+        for k=1:length(mat_files_orth)
+            tmp1 = fileparts(config.matfilelist);
+            [~, tmp2] = fileparts(mat_files_orth{k});
+            mat_files_orth{k} = fullfile(tmp1, tmp2);
+        end
+    end
 end
 clear temp vpath;
 
@@ -352,13 +359,13 @@ elseif whichstudy==4
     bestorder = [1:6];
 end
 figure();
-plotCyclicalTimeFreqPattern(bestseq_LP,config.parc,a(:,:,bestorder),b(bestorder,:),f)
+plotCyclicalTimeFreqPattern(bestseq_LP,config.parc,a(:,:,bestorder),b(bestorder,:),f,config)
 print([config.figdir,'2BPSD_modes'],'-dpng');
 
 %% refit earlier spatial modes to camcan data:
 
 if whichstudy==4
-    MEGUKfolder = '/Users/chiggins/data/Neuron2020/CanonicalRS/250Hz/hmm_1to45hz/'
+    MEGUKfolder = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/'
     nnmffile_MEGUK = [MEGUKfolder,'nnmf_spatialfit.mat'];
     load(nnmffile_MEGUK)
     
@@ -370,7 +377,7 @@ if whichstudy==4
     
     figure();
     bestorder = [1:6];
-    plotCyclicalTimeFreqPattern(bestseq_LP,config.parc,a_new(:,:,bestorder),b_new(bestorder,:),f)
+    plotCyclicalTimeFreqPattern(bestseq_LP,config.parc,a_new(:,:,bestorder),b_new(bestorder,:),f, config)
     print([config.figdir,'2CPSD_modes_samefit'],'-dpng');
 
 end
@@ -434,4 +441,39 @@ if whichstudy==4
     plot4paper('Age','Sequential assymetry')
     title(['Female group: rho=',num2str(R(2,1),2),',p=',num2str(P(2,1),1)])
 end
+
+
+%% Circular Vpath analysis
+
+W=125;
+W_half = (W-1)/2;
+for i=1:length(vpath)
+    vpathcircle{i}= getCircleVpath(vpath{i}, bestseq);
+    tmp = zeros((W-1)/2,1);
+    vpathcircle_window{i} = tmp;
+    for k=W_half+1:length(vpathcircle{i})-W_half
+        vpathcircle_window{i} = [vpathcircle_window{i}; mean(vpathcircle{i}(k-W_half:k+W_half))];
+    end
+    vpathcircle_window{i} = [vpathcircle_window{i}; tmp];
+    
+   
+    % do Fourier analysis on the circle vpath
+    [tmp, circlefreq, circletime] = fourieranalysis_circleVpath(vpathcircle{i}, []);
+    circlepow(i,:,:) = squeeze(nanmean(abs(tmp).^2));
+    circlespctrm(i,:,:) = squeeze(nanmean(tmp));
+    
+    [tmp, circlefreq, circletime] = fourieranalysis_circleVpath(vpathcircle_window{i}, []);
+    circlepow_window(i,:,:) = squeeze(nanmean(abs(tmp).^2));
+    circlespctrm_window(i,:,:) = squeeze(nanmean(tmp));
+end
+
+figure; plot(circlefreq, nanmean(circlepow,3)), hold on, plot(circlefreq, nanmean(nanmean(circlepow,3)), 'k', 'LineWidth', 2) 
+title('Circle vpath PSD per subject, CamCan Rest');
+plot4paper('Frequenzy (Hz)', 'PSD');
+print([config.figdir,'1F1_CircleFreq'],'-dpng');
+
+figure; plot(circlefreq, nanmean(circlepow_window,3)), hold on, plot(circlefreq, nanmean(nanmean(circlepow_window,3)), 'k', 'LineWidth', 2) 
+title('Windowed circle vpath PSD per subject, CamCan Rest');
+plot4paper('Frequenzy (Hz)', 'PSD');
+print([config.figdir,'1F2_CircleFreq_windowed'],'-dpng');
 
