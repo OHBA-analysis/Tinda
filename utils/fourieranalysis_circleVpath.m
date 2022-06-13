@@ -24,7 +24,11 @@ f=ft_freqanalysis(cfg, dat);
 freq=f.freq;
 
 % downsample trial onset time course and make an evoked spectrum
-onsetidx = find(trialonset==1);
+if exist('trialonset', 'var') && ~isempty(trialonset)
+    onsetidx = find(trialonset==1);
+else
+    onsetidx = fsample+1:fsample:length(f.time)-fsample;
+end
 W=1;
 time = -W:timres:W;
 for k=1:length(onsetidx)
