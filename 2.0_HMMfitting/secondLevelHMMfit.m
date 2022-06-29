@@ -54,6 +54,12 @@ elseif whichstudy==5
   temp2 = ls(fullfile(fileparts(config.wrkmemfilelist), 'roinet*orth*.mat'));
   mat_files_orth = splitlines([temp1,temp2]);
   mat_files_orth = mat_files_orth(~cellfun(@isempty, mat_files_orth));
+  % There's a few files that don't have Gamma_task - their T vector also
+  % looks weird. Remove these.
+  for k=1:length(mat_files_orth)
+    kp(k) = any(contains(who('-file', mat_files_orth{k}), 'Gamma_task'));
+  end
+  mat_files_orth = mat_files_orth(kp);
   % create a matrix from where we can select specific subjects
   for k=1:length(mat_files_orth)
     tmp = extractBetween(mat_files_orth{k}, '_matfiles/', '_MEG');
@@ -92,6 +98,17 @@ for subnum=1:config.nSj
     vpath{subnum} = statepath_temp';%temp1.Gamma_task==repmat(G',1,K);
   end
   LT = getStateLifeTimes(vpath{subnum},hmmT{subnum},opts);
+  if length(LT)<12 % some states are not visited
+    LTtmp = cell(1,12);
+    cnt=1;
+    for k=1:12
+      if any(unique(vpath{subnum})==k)
+        LTtmp{k} = LT{cnt};
+        cnt=cnt+1;
+      end
+    end
+    LT = LTtmp;
+  end
   LT_sj(subnum,:) = cellfun(@mean,LT);
 end
 
@@ -162,7 +179,7 @@ for iSj=1:config.nSj
     T = T_poiss;
     save(mat_files_poiss{iSj},'X','T');
   elseif whichstudy==5
-    mat_files_poiss{iSj} = strrep(mat_files_orth{iSj},'_orth',['_Poissdata',int2str(W)]);
+    mat_files_poiss{iSj} = strrep(strrep(mat_files_orth{iSj},'_orth',['_Poissdata',int2str(W)]), 'datasets/HCP_CH_2022/', sprintf('mvanes/Projects/Tinda/Study%d/', whichstudy));
     %mat_files_poiss{iSj} = [config.hmmfolder,'Poissdata_',int2str(W),overlapstring,'/PoissDataSj',int2str(iSj)];
     X = X_poiss;
     T = T_poiss;
@@ -208,64 +225,6 @@ end
 %%
 n_runs = 5;
 if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state one
-  for i_run = 1:n_runs
-    options = [];
-    options.K = 3; % Note this didn't work with 4 states; one is knocked out and results in wierd behaviour
-    options.distribution = 'poisson';
-    options.Pstructure = eye(options.K) + diag(ones(1,options.K-1),1);
-    options.Pstructure(options.K,1) = 1;
-    options.initrep = 4; % this the number of parallel cores
-    options.useParallel = false;
-    
-    % NOTE: initialisation is shite - winds up with states that are extremely
-    % rarely on. just do random init here:
-    
-    Sjs_init = randperm(config.nSj,2);
-    if whichstudy<4
-      X_init = []; T_init = [];
-      for iSj = Sjs_init
-        X_init = [X_init;X_poiss((1+sum(T_poiss(1:(iSj-1)))):sum(T_poiss(1:iSj)),:)];
-        T_init = [T_init;T_poiss(iSj)];
-      end
-      [hmminit,gammainit] = hmmmar(X_init,T_init,options);
-      %     fe_lowest = Inf;
-      %     for i_init=1:10
-      %         options.decodeGamma = 0;
-      %         [hmminit_temp,~,~,~,~,~,fe] = hmmmar(X_poiss,T_poiss,options);
-      %         if i_init==1 | fe(end)<fe_lowest
-      %             hmminit = hmminit_temp;
-      %             fe_lowest = fe(end);
-      %         end
-      %     end
-    else
-      
-      X_poiss = []; T_poiss = [];
-      for iSj = Sjs_init
-        load(mat_files_poiss{iSj});
-        X_poiss = [X_poiss;X];
-        T_poiss = [T_poiss;T];
-      end
-      fe_lowest = Inf;
-      for i_init=1:10
-        options.decodeGamma = 0;
-        [hmminit_temp,~,~,~,~,~,fe] = hmmmar(X_poiss,T_poiss,options);
-        if i_init==1 | fe(end)<fe_lowest
-          hmminit = hmminit_temp;
-          fe_lowest = fe(end);
-        end
-      end
-    end
-  end
-  
-  
-  options = rmfield(options,'initrep');
-  options.hmm = hmminit;
-  
-  % % or set to figure 8 pattern:
-  % options.Pstructure(1,4)=1;
-  % options.Pstructure(3,1)=1;
-  % options.Pstructure(3,4)=0;
-  options.decodeGammif whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state one
   for i_run = 1:n_runs
     options = [];
     options.K = 3; % Note this didn't work with 4 states; one is knocked out and results in wierd behaviour
@@ -442,16 +401,25 @@ W=125;K=3;
 overlapstring='_overlappingWindows';
 
 % infer cycle times:
-if whichstudy<4
-  load([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+if whichstudy~=4
+  load([config.hmmfolder,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
   
   samp_minute = (config.sample_rate*60); % split into minute by minute chunks
   for subnum = 1:config.nSj
     
-    Gamtemp = hmmPoiss.gamma(Poiss_subj_inds==subnum,:);
+    if whichstudy==5
+      Gamtemp = load(mat_files_poiss{subnum},'Gamma', 'T');
+      T_poiss = Gamtemp.T;
+      Gamtemp = Gamtemp.Gamma;
+    else
+      Gamtemp = hmmPoiss.gamma(Poiss_subj_inds==subnum,:);
+    end
     if whichstudy==3
       cycletimes = getStateCycleTimes(Gamtemp,T_poiss([1:3]+(subnum-1)*3));
       lifetimes_meta{subnum} = getStateLifeTimes(Gamtemp,T_poiss([1:3]+(subnum-1)*3));
+    elseif whichstudy==5
+      cycletimes = getStateCycleTimes(Gamtemp,T_poiss);
+      lifetimes_meta{subnum} = getStateLifeTimes(Gamtemp,T_poiss);
     else
       cycletimes = getStateCycleTimes(Gamtemp,T_poiss(subnum));
       lifetimes_meta{subnum} = getStateLifeTimes(Gamtemp,T_poiss(subnum));
@@ -473,6 +441,31 @@ if whichstudy<4
           cycletime_med_sess(subnum,isession) = median(cycletimes);
           FO_meta_sess(subnum,isession,:) = getFractionalOccupancy(Gamtemp,length(Gamtemp));
         end
+      end
+    elseif whichstudy==5 % get task by task detail
+      if task.Wrkmem.TIM.index(subnum)
+        task.Wrkmem.TIM.cycletime{end+1} = cycletimes;
+        task.Wrkmem.TIM.lifetimes{end+1} = lifetimes_meta{subnum};
+      elseif task.Wrkmem.TRESP.index(subnum)
+        task.Wrkmem.TRESP.cycletime{end+1} = cycletimes;
+        task.Wrkmem.TRESP.lifetimes{end+1} = lifetimes_meta{subnum};
+      elseif task.StoryM.TEV.index(subnum)
+        task.StoryM.TEV.cycletime{end+1} = cycletimes;
+        task.StoryM.TEV.lifetimes{end+1} = lifetimes_meta{subnum};
+      elseif task.StoryM.TRESP.index(subnum)
+        task.StoryM.TRESP.cycletime{end+1} = cycletimes;
+        task.StoryM.TRESP.lifetimes{end+1} = lifetimes_meta{subnum};
+      elseif task.StoryM.BSENT.index(subnum)
+        task.StoryM.BSENT.cycletime{end+1} = cycletimes;
+        task.StoryM.BSENT.lifetimes{end+1} = lifetimes_meta{subnum};
+      elseif task.StoryM.BUN.index(subnum)
+        task.StoryM.BUN.cycletime{end+1} = cycletimes;
+        task.StoryM.BUN.lifetimes{end+1} = lifetimes_meta{subnum};
+      end
+      % evoked response
+      evk{subnum} = nan(length(T_poiss), max(T_poiss), 3);
+      for i=1:length(T_poiss)
+        evk{subnum}(i,1:T_poiss(i),:) = Gamtemp(1+sum(T_poiss(1:i-1)):sum(T_poiss(1:i)),:);
       end
     end
     %         % also get minute by minute detail:
@@ -503,7 +496,8 @@ if whichstudy<4
     %         end
   end
 else
-  load([config.figdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+  load([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+  
   
   if ~contains(config.Poiss_dir,'overlappingWindows')
     figdir = [config.figdir,'4_covariates_W',int2str(W),'/'];
@@ -588,12 +582,15 @@ elseif whichstudy==4
   hmm_2ndlevel.cycletime_mu_min=cycletime_mu_min;
   hmm_2ndlevel.cycletime_med_min=cycletime_med_min;
   hmm_2ndlevel.cycletime_std_min=cycletime_std_min;
+elseif whichstudy==5
+  hmm_2ndlevel.task = task;
+  hmm_2ndlevel.evoked = evk;
 end
 
 % save metrics for later analysis:
 config.metricfile = [config.figdir, 'HMMsummarymetrics.mat'];
 if isfile(config.metricfile)
-  save(config.metricfile,'hmm_2ndlevel','-append');
+  save(config.metricfile,'hmm_2ndlevel','-append', '-v7.3');
 else
-  save(config.metricfile,'hmm_2ndlevel')
+  save(config.metricfile,'hmm_2ndlevel', '-v7.3')
 end
