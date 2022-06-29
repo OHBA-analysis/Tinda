@@ -180,21 +180,111 @@ for i3=1:12
 end
 angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
 
+% This is one way to define the strength of the circularity.
 rotational_momentum = imag(sum(sum(angleplot.*hmm_1stlevel.FO_assym)));
 hmm_1stlevel.rotational_momentum = squeeze(rotational_momentum);
 
+rotational_momentum_perm = zeros(config.nSj, 1000);
+offdiag=find(~eye(K));
+for iSj=1:config.nSj
+  for k=1:1000
+    FOtmp = hmm_1stlevel.FO_assym(:,:,iSj);
+    prm = offdiag(randperm(K.^2-K));
+    FOtmp(offdiag) = FOtmp(prm);
+    rotational_momentum_perm(iSj, k) = squeeze(imag(sum(sum(angleplot.*FOtmp))));
+  end
+end
+dat = [];
+dat.time = 0;
+dat.trial = hmm_1stlevel.rotational_momentum;
+dat.label{1} = 'rotational momentum';
+dat.dimord = 'rpt_chan_time';
+datperm = dat;
+datperm.trial = mean(rotational_momentum_perm,2);
 
-
+cfgs=[];
+cfgs.method = 'montecarlo';
+cfgs.statistic = 'depsamplesT';
+cfgs.design(1,1:2*config.nSj)  = [ones(1,config.nSj) 2*ones(1,config.nSj)];
+cfgs.design(2,1:2*config.nSj)  = [1:config.nSj 1:config.nSj];
+cfgs.tail = 0;
+cfgs.neighbours = [];
+cfgs.ivar = 1;
+cfgs.uvar = 2;
+cfgs.numrandomization=10000;
+cfgs.parameter='trial';
+stat=ft_timelockstatistics(cfgs,dat,datperm);
 
 
 %% plot as circular diagram:
 
 if whichstudy<4
-    cyclicalstateplot(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons));
+  sigpoints = pvals<(0.05/bonf_ncomparisons);
 else
-    cyclicalstateplot(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons));
+  sigpoints = pvals<0.0000001*(0.05/bonf_ncomparisons);
 end
+cyclicalstateplot(bestseq,mean_direction, sigpoints);
 print([config.figdir,'1A_Cyclicalpattern'],'-dpng');
+
+% is the group cyclical pattern more circular than expected by chance? Test 
+% this by computing the total phase jumps in the significance plot. Perfect
+% circularity would mean small phase jumps (e.g. from 1 oclock to 2
+% o'clock, instead of 1 o'clock to 5 o'clock), so test this against a 
+% permutation distribution where the significant connections are shuffled.
+% i.e. testing for circularity
+% NOTE: This is all done after: https://github.com/OHBA-analysis/Tinda/blob/main/3.0_SequenceAnalysis/SequenceAnalysis.m#L179
+nperm=1000;
+phase = zeros(K,1);
+for i=1:K
+    phase(i) = exp(sqrt(-1)*(i+2)/12*2*pi);
+end
+
+sigpoints_sign = sign(mean_direction).*sigpoints; % get the signed significant connections
+offdiag=find(~eye(12));
+dist = circ_dist2(angle(phase), angle(phase)); % distances between points 
+% on unit circle (bidirectional) NOTE: relies on circular statistics
+% toolbox
+dist(dist<0) = 2*pi+dist(dist<0); % transform counterclockwise distance 
+% into clockwise distance (i.e. small counterclockwise distance means large
+% clockwise distance)
+dist = dist - diag(diag(dist)); % set 2*pi on diagonal to zero
+for k=1:nperm % create random permutations for offdiagonal elements
+  P(k,:) = randperm(K.^2-K);
+end
+
+nsigpoints = sum(sigpoints(:));
+clear phasejump
+phasejump_perm = zeros(nperm,1);
+for k=1:nperm+1
+  sigpoints_sign_tmp = sigpoints_sign(bestseq, bestseq); % reformat the signed sigpoints 
+  % according to the overall pattern
+  if k>1 % permute offdiagonal elements
+    sigpoints_sign_tmp(offdiag) = sigpoints_sign_tmp(offdiag(P(k-1,:)));
+  end
+  % seperately get the distances for the sigpoints that are positive (i->j)
+  % and negative (j->i). A large distance for i->j means small distance for
+  % j->i
+  Q{k,1} = sigpoints_sign_tmp; 
+  tmp1 = sigpoints_sign_tmp; tmp2 = sigpoints_sign_tmp;
+  tmp1(tmp1<0)=0; tmp2(tmp2>0)=0; tmp2(tmp2<0)=1;
+  % sum the distances
+  d = (sum(sum(tmp1.*dist)) + sum(sum(tmp2.*transpose(dist))))./nsigpoints;
+  if k==1
+    phasejump = d;
+  else
+    phasejump_perm(k-1,1) = d;
+  end
+end
+figure; histogram(phasejump_perm)
+hold on, vline(phasejump), title('empirical mean phase jump versus permutations')
+xlabel('Radians')
+
+% plot the cycle with the smallest phasejump in the permutation
+[a,ix] = min(phasejump_perm);
+cyclicalstateplot(bestseq,Q{ix}, abs(Q{ix}));
+title('permutation with strongest circularity')
+clear Q
+
 
 %% or plot as multiple individual state plots:
 if whichstudy<4
