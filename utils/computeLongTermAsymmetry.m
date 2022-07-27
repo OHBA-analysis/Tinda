@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles)
+function [FO,pvals,tintervalsout,intervalDesign] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -16,11 +16,13 @@ if ~iscell(vpath) || ~iscell(T)
 end
 nSj = length(vpath);
 FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
+intervalDesign = cell(nSj, 1);
 for iSj=1:nSj
   if sum(T{iSj})~=length(vpath{iSj})
     error('Dimension mismatch between T and vpath');
   end
   T_breaks = cumsum(T{iSj}); % indices of HMM chain breaks to be excluded
+  intervalDesign{iSj} = zeros(length(vpath{iSj}), K, length(intervalpercentiles)-1);
   for ik=1:K
     tempaway = [];
     tempto = [];
@@ -64,9 +66,13 @@ for iSj=1:nSj
             if ~runonquartiles
               tempaway = [tempaway;vpath{iSj}(offtimes(t):offtimes(t)+floor(t_interval/2),:)];
               tempto = [tempto;vpath{iSj}(ontimes(t+1)-floor(t_interval/2):ontimes(t+1),:)];
+              intervalDesign{iSj}(offtimes(t):offtimes(t)+floor(t_interval/2), ik, ip) = 1;
+              intervalDesign{iSj}(ontimes(t+1)-floor(t_interval/2):ontimes(t+1), ik, ip) = 2;
             else
               tempaway = [tempaway;vpath{iSj}(offtimes(t):offtimes(t)+floor(t_interval/4),:)];
               tempto = [tempto;vpath{iSj}(ontimes(t+1)-floor(t_interval/4):ontimes(t+1),:)];
+              intervalDesign{iSj}(offtimes(t):offtimes(t)+floor(t_interval/4), ik, ip) = 1;
+              intervalDesign{iSj}(ontimes(t+1)-floor(t_interval/4):ontimes(t+1), ik, ip) = 2;
             end
             %intervaltracker{ip,ik}(length(intervaltracker{ip,ik})+1) = t_interval;
           end

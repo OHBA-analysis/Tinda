@@ -331,7 +331,7 @@ xlim([min(t),max(t)]);
 print([config.figdir,'FigC_StoryMEvokedResponse1'],'-dpng');
 
 %% and check sequential evoked patterns:
-[FO_task,pvals_task,~] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K);
+[FO_task,pvals_task,~,intervalDesign] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K);
 
 bonf_ncomparisons = hmm.K.^2-hmm.K;
 
