@@ -176,11 +176,9 @@ plotEvokedStateDist(gam_evoked_sj,t)
 print([config.figdir,'FigA_WrkMemEvokedResponse'],'-dpng');
 
 %% and check for cyclical patterns:
-% first get the metrics without removing the evoked response
-% intervalDesign contains a vector for each state with the timings of the
-% first half of the interval between state visits (==1) and the second half
-% of the interval (==2)
-[FO_task,pvals_task,~,intervalDesign] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K);
+% as well as the original Tinda analysis, run it in GLM form after
+% subtracting the evoked responde from the task vpath.
+[FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
 bonf_ncomparisons = hmm.K.^2-hmm.K;
 
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
@@ -199,35 +197,7 @@ gcf()
 print([config.figdir,'FigB2_WrkMemSequencePlot_raw'],'-dpng');
 
 
-% Now run the TINDA analysis in GLM form, subtracting a state's evoked
-% response from the vpath
-FO_task_residual = zeros(hmm.K,hmm.K,2,length(vpath_task));
-for iSj=1:length(vpath_task)
-  iSj
-  v=zeros(length(vpath_task{iSj}), hmm.K);
-  for ik=1:hmm.K
-    v(:,ik) = vpath_task{iSj}==ik;
-  end
-  % reshape v to get trials
-  v=reshape(v,[], length(T_all_task{iSj}), hmm.K);
-  v_demean = demean(v, 2);
-  v_demean = reshape(v_demean, [], hmm.K);
-  for ik1=1:hmm.K
-    des = zeros(length(v_demean), 2);
-    des(:,1) = intervalDesign{iSj}(:,ik1)==1;
-    des(:,2) = intervalDesign{iSj}(:,ik1)==2;
-    for ik2=setdiff(1:hmm.K,ik1)
-      b = glmfit(des, v_demean(:,ik2));
-      FO_task_residual(ik1,ik2,:,iSj) = b(2:3);
-    end
-  end
-end
-for ik1=1:hmm.K
-  for ik2=1:hmm.K
-    [~,pvals_task_residual(ik1,ik2)] = ttest(squeeze(FO_task_residual(ik1,ik2,1,:)-FO_task_residual(ik1,ik2,2,:)));
-  end
-end
-
+% get the metrics for the GLM residuals (i.e. accounting for evoked vpath)
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -385,8 +355,7 @@ xlim([min(t),max(t)]);
 print([config.figdir,'FigC_StoryMEvokedResponse1'],'-dpng');
 
 %% and check sequential evoked patterns:
-[FO_task,pvals_task,~,intervalDesign] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K);
-
+[FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
 bonf_ncomparisons = hmm.K.^2-hmm.K;
 
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
@@ -404,44 +373,7 @@ cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
 print([config.figdir,'FigD_StoryMSequencePlot1_raw'],'-dpng');
 
-% GLM
-% with vpath
-% comparing the glmfit approach with the way FO_task is computed,
-% they are equivalent when only using the the two columns in the
-% design that denote the first and second half interval membership.
-% we get the same number in FO_task(a,b,1,1) as for the sum of the
-% mean and interval beta, i.e., sum(b(1:2)) (the mean term can be
-% disregarded because we're testing the difference between the
-% intervals). Note that instead of modelling the mean, we subtract the mean
-% from the data for computational efficiency - in the statement above, the
-% mean was not subtracted.
-FO_task_residual = zeros(hmm.K,hmm.K,2,length(vpath_task));
-for iSj=1:length(vpath_task)
-  iSj
-  v=zeros(length(vpath_task{iSj}), hmm.K);
-  for ik=1:hmm.K
-    v(:,ik) = vpath_task{iSj}==ik;
-  end
-  % reshape v to get trials
-  v=reshape(v,[], length(T_all_task{iSj}), hmm.K);
-  v_demean = demean(v, 2);
-  v_demean = reshape(v_demean, [], hmm.K);
-  for ik1=1:hmm.K
-    des = zeros(length(v_demean), 2);
-    des(:,1) = intervalDesign{iSj}(:,ik1)==1;
-    des(:,2) = intervalDesign{iSj}(:,ik1)==2;
-    for ik2=setdiff(1:hmm.K,ik1)
-      b = glmfit(des, v_demean(:,ik2));
-      FO_task_residual(ik1,ik2,:,iSj) = b(2:3);
-    end
-  end
-end
-for ik1=1:hmm.K
-  for ik2=1:hmm.K
-    [~,pvals_task_residual(ik1,ik2)] = ttest(squeeze(FO_task_residual(ik1,ik2,1,:)-FO_task_residual(ik1,ik2,2,:)));
-  end
-end
-
+% correcting for evoked vpath:
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -596,7 +528,7 @@ gcf;
 print([config.figdir,'FigE_StoryMEvokedResponse2'],'-dpng');
 
 %% and check sequential evoked patterns:
-[FO_task,pvals_task,~,intervalDesign] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K);
+[FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
 
 bonf_ncomparisons = hmm.K.^2-hmm.K;
 
@@ -615,35 +547,7 @@ cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
 print([config.figdir,'FigF_StoryMSequencePlot2_raw'],'-dpng');
 
-% Now run the TINDA analysis in GLM form, subtracting a state's evoked
-% response from the vpath
-FO_task_residual = zeros(hmm.K,hmm.K,2,length(vpath_task));
-for iSj=1:length(vpath_task)
-  iSj
-  v=zeros(length(vpath_task{iSj}), hmm.K);
-  for ik=1:hmm.K
-    v(:,ik) = vpath_task{iSj}==ik;
-  end
-  % reshape v to get trials
-  v=reshape(v,[], length(T_all_task{iSj}), hmm.K);
-  v_demean = demean(v, 2);
-  v_demean = reshape(v_demean, [], hmm.K);
-  for ik1=1:hmm.K
-    des = zeros(length(v_demean), 2);
-    des(:,1) = intervalDesign{iSj}(:,ik1)==1;
-    des(:,2) = intervalDesign{iSj}(:,ik1)==2;
-    for ik2=setdiff(1:hmm.K,ik1)
-      b = glmfit(des, v_demean(:,ik2));
-      FO_task_residual(ik1,ik2,:,iSj) = b(2:3);
-    end
-  end
-end
-for ik1=1:hmm.K
-  for ik2=1:hmm.K
-    [~,pvals_task_residual(ik1,ik2)] = ttest(squeeze(FO_task_residual(ik1,ik2,1,:)-FO_task_residual(ik1,ik2,2,:)));
-  end
-end
-
+% correcting for evoked vpath:
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -660,12 +564,9 @@ gcf()
 print([config.figdir,'FigF_StoryMSequencePlot2'],'-dpng');
 
 % save metrics for later analysis:
-savedir = [config.figdir, 'HMMsummarymetrics.mat']
+savedir = [config.figdir, 'HMMsummarymetrics.mat'];
 if exist(config.metricfile)
     save(savedir,'hmm_1stlevel','-append');
 else
     save(savedir,'hmm_1stlevel')
 end
-print([config.figdir,'FigF_WrkMemSequencePlot'],'-dpng');
-
-%% 

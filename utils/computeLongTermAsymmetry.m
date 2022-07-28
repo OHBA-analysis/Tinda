@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout,intervalDesign] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles)
+function [FO,pvals,tintervalsout,FO_residual,pvals_residual] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -8,22 +8,38 @@ if ~iscolumn(vpath)
   end
 end
 runonquartiles = false; % implement this later to account for sub-elements of intervals (ie not just first half vs second half)
-if nargin<4
+if nargin<4 || isempty(intervalpercentiles)
   intervalpercentiles = [0,100];
+end
+if nargin<5
+  dotaskglm = false;
 end
 if ~iscell(vpath) || ~iscell(T)
   error('vpath and T should be cells, with one entry per subject');
 end
 nSj = length(vpath);
 FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
-intervalDesign = cell(nSj, 1);
+if dotaskglm, FO_residual = zeros(K,K,2,nSj,length(intervalpercentiles)-1); 
+else, FO_residual=[]; end
+
 for iSj=1:nSj
   if sum(T{iSj})~=length(vpath{iSj})
     error('Dimension mismatch between T and vpath');
   end
   T_breaks = cumsum(T{iSj}); % indices of HMM chain breaks to be excluded
-  intervalDesign{iSj} = zeros(length(vpath{iSj}), K, length(intervalpercentiles)-1);
+  if dotaskglm
+    % get the demeaned vpath data to use in the GLM later
+    v=zeros(length(vpath{iSj}), K);
+    for ik=1:K
+      v(:,ik) = vpath{iSj}==ik;
+    end
+    % reshape v to get trials
+    v=reshape(v,[], length(T{iSj}), K);
+    v_demean = demean(v, 2);
+    v_demean = reshape(v_demean, [], K);
+  end
   for ik=1:K
+    intervalDesign = zeros(length(vpath{iSj}),1);
     tempaway = [];
     tempto = [];
     ontimes = find(diff([0;vpath{iSj}==ik;0])==1)-1;
@@ -66,13 +82,13 @@ for iSj=1:nSj
             if ~runonquartiles
               tempaway = [tempaway;vpath{iSj}(offtimes(t):offtimes(t)+floor(t_interval/2),:)];
               tempto = [tempto;vpath{iSj}(ontimes(t+1)-floor(t_interval/2):ontimes(t+1),:)];
-              intervalDesign{iSj}(offtimes(t):offtimes(t)+floor(t_interval/2), ik, ip) = 1;
-              intervalDesign{iSj}(ontimes(t+1)-floor(t_interval/2):ontimes(t+1), ik, ip) = 2;
+              intervalDesign(offtimes(t):offtimes(t)+floor(t_interval/2), 1) = 1;
+              intervalDesign(ontimes(t+1)-floor(t_interval/2):ontimes(t+1), 1) = 2;
             else
               tempaway = [tempaway;vpath{iSj}(offtimes(t):offtimes(t)+floor(t_interval/4),:)];
               tempto = [tempto;vpath{iSj}(ontimes(t+1)-floor(t_interval/4):ontimes(t+1),:)];
-              intervalDesign{iSj}(offtimes(t):offtimes(t)+floor(t_interval/4), ik, ip) = 1;
-              intervalDesign{iSj}(ontimes(t+1)-floor(t_interval/4):ontimes(t+1), ik, ip) = 2;
+              intervalDesign(offtimes(t):offtimes(t)+floor(t_interval/4), 1) = 1;
+              intervalDesign(ontimes(t+1)-floor(t_interval/4):ontimes(t+1), 1) = 2;
             end
             %intervaltracker{ip,ik}(length(intervaltracker{ip,ik})+1) = t_interval;
           end
@@ -85,6 +101,16 @@ for iSj=1:nSj
         end
       end
       tintervalsout{iSj,ik,ip} = tintervals{iSj,ik}(tintervals{iSj,ik}>=p_low & tintervals{iSj,ik}<=p_high);
+      
+      if dotaskglm
+        des = zeros(length(v_demean), 2);
+        des(:,1) = intervalDesign==1;
+        des(:,2) = intervalDesign==2;
+        for ik2=setdiff(1:K,ik)
+          b = glmfit(des, v_demean(:,ik2));
+          FO_residual(ik,ik2,:,iSj,ip) = b(2:3);
+        end
+      end
     end
     %         end
   end
@@ -92,10 +118,15 @@ end
 
 % paired t-tests to evaluate significance:
 pvals = zeros(K,K,length(intervalpercentiles)-1);
+if dotaskglm, pvals_residual = zeros(K,K,length(intervalpercentiles)-1); 
+else, pvals_residual=[]; end
 for ip=1:length(intervalpercentiles)-1
   for ik1=1:12
     for ik2=1:12
       [~,pvals(ik1,ik2,ip)] = ttest(squeeze(FO(ik1,ik2,1,:,ip)-FO(ik1,ik2,2,:,ip)));
+      if dotaskglm
+        [~,pvals_residual(ik1,ik2,ip)] = ttest(squeeze(FO_residual(ik1,ik2,1,:,ip)-FO_residual(ik1,ik2,2,:,ip)));
+      end
     end
   end
 end
