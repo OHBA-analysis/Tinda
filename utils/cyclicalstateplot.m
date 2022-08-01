@@ -1,4 +1,4 @@
-function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme)
+function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme,newfigure)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -6,17 +6,20 @@ if nargin<1
 end
 K = length(ordering);
 clock=[12,1,2,3,11,4,10,5,7,9,6,8];
-if nargin<4
+if nargin<4 || isempty(color_scheme)
     color_scheme = set1_cols;
 end
+if nargin<5,  newfigure=true;   end
+
 disttoplot_manual = zeros(12,2);
 for i=1:12
     temp = exp(sqrt(-1)*(i+2)/12*2*pi);
     disttoplot_manual(ordering(i),:) = [real(temp),imag(temp)];
 end
 
-
-figure('Position',[440 501 402 297]);
+if newfigure
+ figure('Position',[440 501 402 297]);
+end
 for ik1=1:K
     for k2=1:K
         if sigpoints(ik1,k2)
