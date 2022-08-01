@@ -1,4 +1,4 @@
-function [circularity, pval, permuted_graphs] = geometric_circularity(mean_direction, sigpoints, nperm, doplot)
+function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric_circularity(mean_direction, sigpoints, nperm, doplot)
 % this function provides a measure of how geometrical circular a directed
 % graph is. It is based on the directed (i.e., clockwise vs. counter
 % clockwise) distance between connected nodes. For perfect circles, the
@@ -23,9 +23,16 @@ function [circularity, pval, permuted_graphs] = geometric_circularity(mean_direc
 %                   circularity
 %
 % OUTPUT
-% circularity: double - measure between 0 (low circularity) and 1 (high
-%              circularity) - pi minus the average phase jump (rad) divided
-%              by the average phase jump of the permutations)
+% circularity:        double - measure between 0 (low circularity) and 1 
+%                     (high circularity), defined by a normalized measure
+%                     of empirical circularity over mean over permutations
+% pval:               double, p-value for empirical circularity vs. 
+%                     permutations
+% circularity_perm:   N x 1 vector containing permuted circularity scores
+% permuted_graphs:    cell(N,1) containing the permuted graphs (K x K)
+% fig:                figure object
+%
+%
 % Copyright Mats van Es, University of Oxford, August 2022.
 
 if nargin<3 || isempty(nperm)
@@ -122,9 +129,10 @@ end
 
 circularity = compute_circularity(mean_phasejump, mean_phasejump_perm, K);
 pval = max([(nperm - sum(mean_phasejump < mean_phasejump_perm)) / nperm, 1 / nperm]);
+circularity_perm = compute_circularity(mean_phasejump_perm,mean_phasejump_perm,K);
 
 if doplot
-  figure; 
+  fig=figure; 
   
   % plot the cycle with the smallest phasejump in the permutation
   subplot(1,4,1)
@@ -132,7 +140,7 @@ if doplot
   title(sprintf('empirical cycle plot \n circularity = %s \n', num2str(round(circularity, 2))))
   [~,ix] = min(mean_phasejump_perm);
   
-  circularity_perm = compute_circularity(mean_phasejump_perm,mean_phasejump_perm,K);
+  
   subplot(1,4,2)
   cyclicalstateplot(1:K,permuted_graphs{ix}, abs(permuted_graphs{ix}), [], false);
   title(sprintf('max permutation  circularity \n circularity = %s \n', num2str(round(max(circularity_perm),2))))
@@ -146,6 +154,8 @@ if doplot
   histogram(circularity_perm)
   hold on, vline(circularity), title('empirical circularity versus permutations')
   xlabel('Radians'), ylabel('count'), xlim([0, 1.1])
+else
+  fig = false;
 end
 
 function circularity = compute_circularity(phasejump,phasejump_perm,K)

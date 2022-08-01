@@ -226,7 +226,7 @@ end
 cyclicalstateplot(bestseq,mean_direction, sigpoints);
 print([config.figdir,'1A_Cyclicalpattern'],'-dpng');
 
-[circularity, circle_pval, ~] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
+[circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
 gcf;
 print([config.figdir,'1Asupp_CyclicalpatternVsPermutations'],'-dpng');
 
