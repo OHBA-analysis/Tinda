@@ -91,7 +91,7 @@ for k=1:nperm+1
   % according to the overall pattern
   if k>1
     % permute offdiagonal elements
-    if 1
+    if 0
       sigpoints_sign_tmp(offdiag) = sigpoints_sign_tmp(offdiag(P(k-1,:)));
       
     elseif 1
@@ -115,11 +115,11 @@ for k=1:nperm+1
         end
       end
     end
+    permuted_graphs{k-1,1} = sigpoints_sign_tmp;
   end
   % seperately get the distances for the sigpoints that are positive (i->j)
   % and negative (j->i). A large distance for i->j means small distance for
   % j->i
-  permuted_graphs{k,1} = sigpoints_sign_tmp;
   tmp1 = sigpoints_sign_tmp; tmp2 = sigpoints_sign_tmp;
   tmp1(tmp1<0)=0; tmp2(tmp2>0)=0; tmp2(tmp2<0)=1;
   
