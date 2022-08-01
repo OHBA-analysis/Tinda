@@ -1,4 +1,4 @@
-function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric_circularity(mean_direction, sigpoints, nperm, doplot)
+function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric_circularity(mean_direction, sigpoints, nperm, clockdir, doplot)
 % this function provides a measure of how geometrical circular a directed
 % graph is. It is based on the directed (i.e., clockwise vs. counter
 % clockwise) distance between connected nodes. For perfect circles, the
@@ -19,6 +19,7 @@ function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric
 % sigpoints:        N x N matrix containing ones for statistically
 %                   significant edges
 % nperm:            double/int, number of permutations
+% clockdir:         1 or 'auto'
 % doplot:           boolean, whether to plot empirical and permuted 
 %                   circularity
 %
@@ -38,7 +39,13 @@ function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric
 if nargin<3 || isempty(nperm)
   nperm = 1000;
 end
-if nargin<4 || isempty(doplot)
+if nargin>=4 && ischar(clockdir) && strcmp(clockdir, 'auto')
+  clockdir = sign(mean(sign(mean_direction(:))));% determine whether the mean
+% circle direction is clockwise (1) or counter clockwise (-1)
+else
+  clockdir = 1;
+end
+if nargin<5 || isempty(doplot)
   doplot = 1;
 end
 
@@ -53,8 +60,6 @@ nsigpoints = sum(sigpoints(:));
 
 sigpoints_sign = sign(mean_direction).*sigpoints; % get the signed
 % significant connections
-clockdir = sign(mean(sign(mean_direction(:))));% determine whether the mean
-% circle direction is clockwise (1) or counter clockwise (-1)
 
 % define directed distance
 dist = circ_dist2(angle(phase), angle(phase)); % distances between points
@@ -153,7 +158,7 @@ if doplot
   subplot(2,3,[3,6])
   histogram(circularity_perm)
   hold on, vline(circularity), title(sprintf('empirical circularity \n vs. permutations'))
-  xlabel('Radians'), ylabel('count'), xlim([0, 1.1])
+  xlabel('Circularity'), ylabel('count'), xlim([0, 1.1])
 else
   fig = false;
 end
