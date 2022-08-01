@@ -184,18 +184,17 @@ bonf_ncomparisons = hmm.K.^2-hmm.K;
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
-hmm_1stlevel.WrkMem.FO_intervals_raw = nan(12,12,2,79);
-hmm_1stlevel.WrkMem.FO_intervals_raw(:,:,:,hastaskdata) = FO_task;
-hmm_1stlevel.WrkMem.FO_assym_raw = nan(12,12,79);
-hmm_1stlevel.WrkMem.FO_assym_raw(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
+hmm_1stlevel.WrkMem.raw.FO_intervals = nan(12,12,2,79);
+hmm_1stlevel.WrkMem.raw.FO_intervals(:,:,:,hastaskdata) = FO_task;
+hmm_1stlevel.WrkMem.raw.FO_assym = nan(12,12,79);
+hmm_1stlevel.WrkMem.raw.FO_assym(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
 
-rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.WrkMem.FO_assym_raw)));
-hmm_1stlevel.WrkMem.rotational_momentum_raw = squeeze(rotational_momentum);
+rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.WrkMem.raw.FO_assym)));
+hmm_1stlevel.WrkMem.raw.rotational_momentum = squeeze(rotational_momentum);
 
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf()
 print([config.figdir,'FigB2_WrkMemSequencePlot_raw'],'-dpng');
-
 
 % get the metrics for the GLM residuals (i.e. accounting for evoked vpath)
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
@@ -361,13 +360,13 @@ bonf_ncomparisons = hmm.K.^2-hmm.K;
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
-hmm_1stlevel.StoryM1.FO_intervals_raw = nan(12,12,2,79);
-hmm_1stlevel.StoryM1.FO_intervals_raw(:,:,:,hastaskdata) = FO_task;
-hmm_1stlevel.StoryM1.FO_assym_raw = nan(12,12,79);
-hmm_1stlevel.StoryM1.FO_assym_raw(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
+hmm_1stlevel.StoryM1.raw.FO_intervals = nan(12,12,2,79);
+hmm_1stlevel.StoryM1.raw.FO_intervals(:,:,:,hastaskdata) = FO_task;
+hmm_1stlevel.StoryM1.raw.FO_assym = nan(12,12,79);
+hmm_1stlevel.StoryM1.raw.FO_assym(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
 
-rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.StoryM1.FO_assym_raw)));
-hmm_1stlevel.StoryM1.rotational_momentum_raw = squeeze(rotational_momentum);
+rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.StoryM1.raw.FO_assym)));
+hmm_1stlevel.StoryM1.raw.rotational_momentum = squeeze(rotational_momentum);
 
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
@@ -535,13 +534,13 @@ bonf_ncomparisons = hmm.K.^2-hmm.K;
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
 
-hmm_1stlevel.StoryM2.FO_intervals_raw = nan(12,12,2,79);
-hmm_1stlevel.StoryM2.FO_intervals_raw(:,:,:,hastaskdata) = FO_task;
-hmm_1stlevel.StoryM2.FO_assym_raw = nan(12,12,79);
-hmm_1stlevel.StoryM2.FO_assym_raw(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
+hmm_1stlevel.StoryM2.raw.FO_intervals = nan(12,12,2,79);
+hmm_1stlevel.StoryM2.raw.FO_intervals(:,:,:,hastaskdata) = FO_task;
+hmm_1stlevel.StoryM2.raw.FO_assym = nan(12,12,79);
+hmm_1stlevel.StoryM2.raw.FO_assym(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
 
-rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.StoryM2.FO_assym_raw)));
-hmm_1stlevel.StoryM2.rotational_momentum_raw = squeeze(rotational_momentum);
+rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.StoryM2.raw.FO_assym)));
+hmm_1stlevel.StoryM2.raw.rotational_momentum = squeeze(rotational_momentum);
 
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
