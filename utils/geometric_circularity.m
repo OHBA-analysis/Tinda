@@ -49,6 +49,15 @@ if nargin<5 || isempty(doplot)
   doplot = 1;
 end
 
+if all(sigpoints(:)==0)
+  circularity=nan;
+  pval=nan;
+  circularity_perm=[];
+  permuted_graphs=[];
+  fig=[];
+  return
+end
+
 % create some (geometrical) variables
 K = size(mean_direction,1);
 phase = zeros(K,1);
