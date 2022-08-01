@@ -54,7 +54,7 @@ if all(sigpoints(:)==0)
   pval=nan;
   circularity_perm=[];
   permuted_graphs=[];
-  fig=[];
+  fig=figure;
   return
 end
 
