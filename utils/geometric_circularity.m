@@ -135,24 +135,24 @@ if doplot
   fig=figure; 
   
   % plot the cycle with the smallest phasejump in the permutation
-  subplot(1,4,1)
+  subplot(2,3,1)
   cyclicalstateplot(1:K,mean_direction, sigpoints, [], false);
   title(sprintf('empirical cycle plot \n circularity = %s \n', num2str(round(circularity, 2))))
   [~,ix] = min(mean_phasejump_perm);
   
   
-  subplot(1,4,2)
+  subplot(2,3,4)
   cyclicalstateplot(1:K,permuted_graphs{ix}, abs(permuted_graphs{ix}), [], false);
   title(sprintf('max permutation  circularity \n circularity = %s \n', num2str(round(max(circularity_perm),2))))
   
-  subplot(1,4,3)
+  subplot(2,3,[2,5])
   histogram(mean_phasejump_perm)
-  hold on, vline(mean_phasejump), title('empirical mean phase jump versus permutations')
+  hold on, vline(mean_phasejump), title(sprintf('empirical mean phase \n jump vs. permutations'))
   xlabel('Radians'), ylabel('count'), xlim([0 2*pi])
   
-  subplot(1,4,4)
+  subplot(2,3,[3,6])
   histogram(circularity_perm)
-  hold on, vline(circularity), title('empirical circularity versus permutations')
+  hold on, vline(circularity), title(sprintf('empirical circularity \n vs. permutations'))
   xlabel('Radians'), ylabel('count'), xlim([0, 1.1])
 else
   fig = false;
