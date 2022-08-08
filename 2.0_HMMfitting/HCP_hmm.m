@@ -1,3 +1,6 @@
+% Note: on shared drive this analysis is saved in directory HCP_CH_2022
+
+
 % this the script to run on the October 2021 preprocced data:
 
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';

@@ -61,22 +61,16 @@ elseif whichstudy==4 % this the CamCan model fit:
     config.participantfile = fullfile(basedir, 'ParticipantCovariates/participants.tsv');
     config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
     config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
-elseif whichstudy==5 || whichstudy==52 || whichstudy==53 % this refers to the HCP task epochs
+elseif whichstudy==5
     config.nSj = 237/3;
-    if whichstudy==5
-      config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
-    elseif whichstudy==52
-      config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Workmem/';
-    elseif whichstudy==53
-      config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM/';
-    end
+    config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
     config.hmmfilename = 'hmm_analysis2.mat';
     config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
     config.participantcovariates = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/';
     config.wrkmemdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/';
-    config.wrkmemfilelist = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/filelist.mat';
+    config.wrkmemfilelist = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study5/ve_output_Wrkmem_matfiles/filelist.mat';
     config.storymdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/';
-    config.storymfilelist = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/filelist.mat';
+    config.storymfilelist = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study5/ve_output_StoryM_matfiles/filelist.mat';
     config.sample_rate=240;
 end
 % generic output directories:
@@ -95,4 +89,5 @@ if ~isfolder(config.figdir)
     mkdir(config.figdir)
 end
 config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+config.metricfile_gauss = [config.hmmfolder,'HMM_gauss_summarymetrics.mat'];
 end

@@ -50,16 +50,9 @@ elseif whichstudy==4
     mat_files_orth{i} = strrep(mat_files_orth{i}, '/Volumes/CamsHD2/', '/ohba/pi/mwoolrich/datasets/');
   end
 elseif whichstudy==5
-  temp1 = ls(fullfile(fileparts(config.storymfilelist), 'roinet*orth*.mat'));%load(config.storymfilelist);
-  temp2 = ls(fullfile(fileparts(config.wrkmemfilelist), 'roinet*orth*.mat'));
-  mat_files_orth = splitlines([temp1,temp2]);
-  mat_files_orth = mat_files_orth(~cellfun(@isempty, mat_files_orth));
-  % There's a few files that don't have Gamma_task - their T vector also
-  % looks weird. Remove these.
-  for k=1:length(mat_files_orth)
-    kp(k) = any(contains(who('-file', mat_files_orth{k}), 'Gamma_task'));
-  end
-  mat_files_orth = mat_files_orth(kp);
+  temp1 = load(config.storymfilelist);
+  temp2 = load(config.wrkmemfilelist);
+  mat_files_orth = [temp1.mat_files_orth,temp2.mat_files_orth];
   % create a matrix from where we can select specific subjects
   for k=1:length(mat_files_orth)
     tmp = extractBetween(mat_files_orth{k}, '_matfiles/', '_MEG');
@@ -71,7 +64,7 @@ elseif whichstudy==5
   task = HCPtaskdef(mat_files_orth);
   config.nSj = length(mat_files_orth);
 end
-clear temp vpath;
+clear temp vpath LT_sj;
 
 if whichstudy<4
   Gamma = hmm.gamma;
@@ -81,6 +74,7 @@ opts = [];
 opts.K = 12;
 opts.Fs = config.sample_rate;
 FO = zeros(K,K,2,config.nSj);
+
 for subnum=1:config.nSj
   if whichstudy<4
     vpath{subnum} = hmm.statepath(hmm.subj_inds==subnum);
@@ -97,6 +91,7 @@ for subnum=1:config.nSj
     %G = max(temp1.Gamma_task');
     vpath{subnum} = statepath_temp';%temp1.Gamma_task==repmat(G',1,K);
   end
+  
   LT = getStateLifeTimes(vpath{subnum},hmmT{subnum},opts);
   if length(LT)<12 % some states are not visited
     LTtmp = cell(1,12);
@@ -177,6 +172,9 @@ for iSj=1:config.nSj
     mat_files_poiss{iSj} = [config.figdir,'Poissdata_',int2str(W),overlapstring,'/PoissDataSj',int2str(iSj)]; % originally config.hmmdir
     X = X_poiss;
     T = T_poiss;
+    if exist(mat_files_poiss{iSj})
+      error('careful - about to overwrite files containing STC info!')
+    end
     save(mat_files_poiss{iSj},'X','T');
   elseif whichstudy==5
     mat_files_poiss{iSj} = strrep(strrep(mat_files_orth{iSj},'_orth',['_Poissdata',int2str(W)]), 'datasets/HCP_CH_2022/', sprintf('mvanes/Projects/Tinda/Study%d/', whichstudy));
@@ -272,11 +270,9 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
         end
       end
     end
-    
-    
-    options = rmfield(options,'initrep')
+    options = rmfield(options,'initrep');
     options.hmm = hmminit;
-    
+
     % % or set to figure 8 pattern:
     % options.Pstructure(1,4)=1;
     % options.Pstructure(3,1)=1;
@@ -394,6 +390,7 @@ else
     [~,Gamma] = hmmmar(temp.X,temp.T,options);
     save(mat_files_poiss{i},'Gamma','-append');
   end
+
 end
 
 %% finally, save summary stats to file for later analysis:
@@ -497,8 +494,7 @@ if whichstudy~=4
   end
 else
   load([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
-  
-  
+   
   if ~contains(config.Poiss_dir,'overlappingWindows')
     figdir = [config.figdir,'4_covariates_W',int2str(W),'/'];
     mkdir(figdir);
@@ -594,3 +590,4 @@ if isfile(config.metricfile)
 else
   save(config.metricfile,'hmm_2ndlevel', '-v7.3')
 end
+

@@ -223,8 +223,11 @@ if whichstudy<4
 else
   sigpoints = pvals<0.0000001*(0.05/bonf_ncomparisons);
 end
+bestseq = bestsequencemetrics{1};
 cyclicalstateplot(bestseq,mean_direction, sigpoints);
 print([config.figdir,'1A_Cyclicalpattern'],'-dpng');
+print([config.figdir,'1A_Cyclicalpattern'],'-depsc');
+print([config.figdir,'1A_Cyclicalpattern'],'-dsvg');
 
 [circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
 gcf;
