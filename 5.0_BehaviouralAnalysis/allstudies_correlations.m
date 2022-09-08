@@ -268,7 +268,7 @@ end
 subplot(1,4,4);
 colorbar;
 axis off
-print([figdir,'1AMetastateProfile'],'-dpng');
+print([config.figdir,'1AMetastateProfile'],'-dpng');
 %% check for correlation with cycle rates:
 W = 125;
 
