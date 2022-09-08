@@ -5,7 +5,7 @@
 
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';
 dirname = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
-dirname_matfiles = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/ve_output_rest_matfiles/';
+dirname_matfiles = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest_matfiles/';
 if ~isdir(dirname_matfiles)
     mkdir(dirname_matfiles)
 end
@@ -132,7 +132,7 @@ options.BIGdelay = 5;
 options.BIGforgetrate = 0.7;
 options.BIGbase_weights = 0.9;
 for irun=1:Nruns
-
+    irun
     outputfile = [dirname 'hmm_analysis',int2str(irun),'.mat'];
     fprintf(['Running HMM:']);
     [hmm, Gamma, ~, vpath,~,~,fehist] = hmmmar(mat_files_orth,T_all,options);
@@ -155,8 +155,6 @@ for irun=1:Nruns
     vpath = vpath2;
     hmm = rmfield(hmm,'gamma');
     save(outputfile,'hmm','Gamma','vpath','T_all','fehist')
-
-
 end
 
 %% find lowest free energy model:
