@@ -133,17 +133,24 @@ for k=1:nperm+1
   tmp1(tmp1<0)=0; tmp2(tmp2>0)=0; tmp2(tmp2<0)=1;
   
   % sum the distances
+  e = max([tmp1.*dist/(2*pi/K), tmp2.*transpose(dist)/(2*pi/K)], [], 2);
   d = (sum(sum(tmp1.*dist)) + sum(sum(tmp2.*transpose(dist))))./nsigpoints;
   if k==1
     mean_phasejump = d;
+    eccentricity = mean(e);
+    radius = min(e);
+    diameter = max(e);
   else
     mean_phasejump_perm(k-1,1) = d;
+    eccentricity_perm(k-1,1) = mean(e);
+    radius_perm(k-1,1) = min(e);
+    diameter_perm(k-1,1) = max(e);
   end
 end
 
-circularity = compute_circularity(mean_phasejump, mean_phasejump_perm, K);
+circularity = compute_circularity(mean_phasejump, sigpoints);
 pval = max([(nperm - sum(mean_phasejump < mean_phasejump_perm)) / nperm, 1 / nperm]);
-circularity_perm = compute_circularity(mean_phasejump_perm,mean_phasejump_perm,K);
+circularity_perm = compute_circularity(mean_phasejump_perm, sigpoints);
 
 if doplot
   fig=figure; 
@@ -172,8 +179,13 @@ else
   fig = false;
 end
 
-function circularity = compute_circularity(phasejump,phasejump_perm,K)
-  circularity = (abs(circ_dist(pi, phasejump))+2*pi/K)/(2*pi-abs(circ_mean(phasejump_perm)));
+function circularity = compute_circularity(phasejump, sigpoints)
+  % Can we incorporate into this the amount of jumps we're making? If we
+  % only have K-1 jumps, we can either not create a full circle, or we have
+  % at least one jump with 2*2pi/K distance. Currently the latter will have
+  % a lower circularity.
+  K = size(sigpoints,1);
+  circularity = (abs(circ_dist(pi, phasejump))+2*pi/K)/pi; % use the theoretical mean phasejump (pi) for random connections instead of the empirical one ((2*pi-abs(circ_mean(phasejump_perm))))
 end
 
 end
