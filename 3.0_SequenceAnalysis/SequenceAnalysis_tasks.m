@@ -178,8 +178,11 @@ print([config.figdir,'FigA_WrkMemEvokedResponse'],'-dpng');
 %% and check for cyclical patterns:
 % as well as the original Tinda analysis, run it in GLM form after
 % subtracting the evoked responde from the task vpath.
+%% and check for cyclical patterns:
+% as well as the original Tinda analysis, run it in GLM form after
+% subtracting the evoked responde from the task vpath.
 [FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
-bonf_ncomparisons = hmm.K.^2-hmm.K;
+sigpoints = pvals_task<(0.05/bonf_ncomparisons);
 
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
@@ -192,11 +195,17 @@ hmm_1stlevel.WrkMem.raw.FO_assym(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO
 rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.WrkMem.raw.FO_assym)));
 hmm_1stlevel.WrkMem.raw.rotational_momentum = squeeze(rotational_momentum);
 
-cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
+cyclicalstateplot(bestseq,mean_direction,sigpoints);
 gcf()
-print([config.figdir,'FigB2_WrkMemSequencePlot_raw'],'-dpng');
+print([config.figdir,'FigB_WrkMemSequencePlot_raw'],'-dpng');
+[circularity_raw, circle_pval_raw, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
+hmm_1stlevel.WrkMem.raw.circularity = circularity_raw;
+hmm_1stlevel.WrkMem.raw.pval = circle_pval_raw;
+gcf;
+print([config.figdir,'FigBsupp_WrkMemCircularity_raw'],'-dpng');
 
 % get the metrics for the GLM residuals (i.e. accounting for evoked vpath)
+sigpoints_residual = pvals_task_residual<(0.05/bonf_ncomparisons);
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -211,6 +220,11 @@ hmm_1stlevel.WrkMem.rotational_momentum = squeeze(rotational_momentum_residual);
 cyclicalstateplot(bestseq,mean_direction_residual,pvals_task_residual<(0.05/bonf_ncomparisons));
 gcf()
 print([config.figdir,'FigB_WrkMemSequencePlot'],'-dpng');
+[circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction_residual(bestseq, bestseq), sigpoints_residual(bestseq, bestseq));
+hmm_1stlevel.WrkMem.circularity = circularity;
+hmm_1stlevel.WrkMem.pval = circle_pval;
+gcf;
+print([config.figdir,'FigBsupp_WrkMemCircularity'],'-dpng');
 
 % save metrics for later analysis:
 savedir = [config.figdir, 'HMMsummarymetrics.mat'];
@@ -355,7 +369,7 @@ print([config.figdir,'FigC_StoryMEvokedResponse1'],'-dpng');
 
 %% and check sequential evoked patterns:
 [FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
-bonf_ncomparisons = hmm.K.^2-hmm.K;
+sigpoints = pvals_task<(0.05/bonf_ncomparisons);
 
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
@@ -371,8 +385,14 @@ hmm_1stlevel.StoryM1.raw.rotational_momentum = squeeze(rotational_momentum);
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
 print([config.figdir,'FigD_StoryMSequencePlot1_raw'],'-dpng');
+[circularity_raw, circle_pval_raw, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
+hmm_1stlevel.StoryM1.raw.circularity = circularity_raw;
+hmm_1stlevel.StoryM1.raw.pval = circle_pval_raw;
+gcf;
+print([config.figdir,'FigDsupp_StoryMCircularity1_raw'],'-dpng');
 
 % correcting for evoked vpath:
+sigpoints_residual = pvals_task_residual<(0.05/bonf_ncomparisons);
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -387,6 +407,11 @@ hmm_1stlevel.StoryM1.rotational_momentum = squeeze(rotational_momentum_residual)
 cyclicalstateplot(bestseq,mean_direction_residual,pvals_task_residual<(0.05/bonf_ncomparisons));
 gcf()
 print([config.figdir,'FigD_StoryMSequencePlot1'],'-dpng');
+[circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction_residual(bestseq, bestseq), sigpoints_residual(bestseq, bestseq));
+hmm_1stlevel.StoryM1.circularity = circularity;
+hmm_1stlevel.StoryM1.pval = circle_pval;
+gcf;
+print([config.figdir,'FigDsupp_StoryMCircularity1'],'-dpng');
 
 % save metrics for later analysis:
 savedir = [config.figdir, 'HMMsummarymetrics.mat']
@@ -528,8 +553,8 @@ print([config.figdir,'FigE_StoryMEvokedResponse2'],'-dpng');
 
 %% and check sequential evoked patterns:
 [FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
+sigpoints = pvals_task<(0.05/bonf_ncomparisons);
 
-bonf_ncomparisons = hmm.K.^2-hmm.K;
 
 mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
 mean_assym = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
@@ -545,8 +570,14 @@ hmm_1stlevel.StoryM2.raw.rotational_momentum = squeeze(rotational_momentum);
 cyclicalstateplot(bestseq,mean_direction,pvals_task<(0.05/bonf_ncomparisons));
 gcf;
 print([config.figdir,'FigF_StoryMSequencePlot2_raw'],'-dpng');
+[circularity_raw, circle_pval_raw, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
+hmm_1stlevel.StoryM2.raw.circularity = circularity_raw;
+hmm_1stlevel.StoryM2.raw.pval = circle_pval_raw;
+gcf;
+print([config.figdir,'FigFsupp_StoryMCircularity2_raw'],'-dpng');
 
 % correcting for evoked vpath:
+sigpoints_residual = pvals_task_residual<(0.05/bonf_ncomparisons);
 mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
 mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
 
@@ -561,6 +592,11 @@ hmm_1stlevel.StoryM2.rotational_momentum = squeeze(rotational_momentum_residual)
 cyclicalstateplot(bestseq,mean_direction_residual,pvals_task_residual<(0.05/bonf_ncomparisons));
 gcf()
 print([config.figdir,'FigF_StoryMSequencePlot2'],'-dpng');
+[circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction_residual(bestseq, bestseq), sigpoints_residual(bestseq, bestseq));
+hmm_1stlevel.SotryM.circularity = circularity;
+hmm_1stlevel.WrkMem.pval = circle_pval;
+gcf;
+print([config.figdir,'FigFsupp_StoryMCircularity2'],'-dpng');
 
 % save metrics for later analysis:
 savedir = [config.figdir, 'HMMsummarymetrics.mat'];

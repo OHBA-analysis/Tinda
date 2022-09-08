@@ -71,6 +71,7 @@ FO = zeros(K,K,2,config.nSj);
 opts = [];
 opts.K = 12;
 opts.Fs = config.sample_rate;
+opts.dropstates=0;
 for subnum=1:config.nSj
     fprintf(['\nProcessing subj ',int2str(subnum)]);
     if whichstudy~=4
@@ -230,6 +231,12 @@ print([config.figdir,'1A_Cyclicalpattern'],'-depsc');
 print([config.figdir,'1A_Cyclicalpattern'],'-dsvg');
 
 [circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
+hmm_1stlevel.circularity = circularity;
+hmm_1stlevel.pval = circle_pval;
+tmp = hmm_1stlevel.FO_assym; tmp(isnan(tmp))=0;
+for k=1:size(tmp,3)
+  [hmm_1stlevel.circularity_subject(k,1), hmm_1stlevel.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(tmp(bestseq, bestseq,k), sigpoints(bestseq, bestseq),[],[],0);
+end
 gcf;
 print([config.figdir,'1Asupp_CyclicalpatternVsPermutations'],'-dpng');
 
@@ -398,6 +405,8 @@ end
 figure();
 plotCyclicalTimeFreqPattern(bestseq_LP,config.parc,a(:,:,bestorder),b(bestorder,:),f,config)
 print([config.figdir,'2BPSD_modes'],'-dpng');
+
+
 
 %% refit earlier spatial modes to camcan data:
 
