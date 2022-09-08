@@ -329,7 +329,7 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
           options.hmm.state(k).W.W_rate = LR*options.hmm.state(k).W.W_rate + (1-LR)*hmmtemp.state(k).W.W_rate;
         end
         options.hmm.Pi = LR*options.hmm.Pi + (1-LR)*hmmtemp.Pi;
-        options.hmm.Pe = LR*options.hmm.Pe + (1-LR)*hmmtemp.Pe;
+%         options.hmm.Pe = LR*options.hmm.Pe + (1-LR)*hmmtemp.Pe;
         options.hmm.P = LR*options.hmm.P + (1-LR)*hmmtemp.P;
         options.hmm.Dir_alpha = LR*options.hmm.Dir_alpha + (1-LR)*hmmtemp.Dir_alpha;
         options.hmm.Dir2d_alpha = LR*options.hmm.Dir2d_alpha + (1-LR)*hmmtemp.Dir2d_alpha;
@@ -365,8 +365,11 @@ if whichstudy<4
   %     print([config.figdir,'Fig0_ConvergenceRecord_window',int2str(iW)],'-dpng');
 else
   if whichstudy==4
-    hmmPoiss = rmfield(options.hmm,'Gamma');
-    save([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+    if isfield(options.hmm, 'Gamma')
+      hmmPoiss = rmfield(options.hmm,'Gamma');
+    else
+      hmmPoiss = options.hmm;
+    end
   else
     options = [];
     options.K = 3; % Note this didn't work with 4 states; one is knocked out and results in wierd behaviour
@@ -375,7 +378,7 @@ else
     options.Pstructure(options.K,1) = 1;
     options.useParallel = false;
     options.standardise = false;
-    load([config.hmmfolder,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+    load([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
     
   end
   % and infer each subject's associated state timecourse:
@@ -384,13 +387,21 @@ else
   options.cyc=1;
   options.hmm = hmmPoiss;
   
+  GammaPoiss = [];
+  T_poiss = [];
   for i=1:length(mat_files_poiss)
     fprintf(['\n inferring STC for sj ',int2str(i)]);
     temp = load(mat_files_poiss{i});
     [~,Gamma] = hmmmar(temp.X,temp.T,options);
     save(mat_files_poiss{i},'Gamma','-append');
+    
+    GammaPoiss = [GammaPoiss; Gamma];
+    T_poiss = [T_poiss; temp.T];
   end
-
+  hmmPoiss.gamma = GammaPoiss;
+if whichstudy==4
+  save([config.figdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss', 'GammaPoiss','T_poiss','Poiss_subj_inds');
+end
 end
 
 %% finally, save summary stats to file for later analysis:
@@ -493,7 +504,7 @@ if whichstudy~=4
     %         end
   end
 else
-  load([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+  load([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','GammaPoiss','T_poiss','Poiss_subj_inds');
    
   if ~contains(config.Poiss_dir,'overlappingWindows')
     figdir = [config.figdir,'4_covariates_W',int2str(W),'/'];
