@@ -24,12 +24,7 @@ for ik=1:K
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1.MarkerFaceAlpha = 1;%.75;
-    
-    if ik<10
-        text(disttoplot_manual(ik,1)-0.01,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    else
-        text(disttoplot_manual(ik,1)-0.07,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    end
+    text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold', 'HorizontalAlignment', 'center', 'FontName', 'Calibri');hold on;
 end
 axis square
 axis off
@@ -61,7 +56,7 @@ for inode = 1:nnodes
     set(gca,'YTick',[40/3, 40*2/3]);
     set(gca,'YTickLabel',fliplr(freq_labels(1:2)));
     set(gca,'XTick',1000/24:1000/12:1000);
-    set(gca, 'XTickLabel', [1:12]);
+    set(gca, 'XTickLabel', manualorder);
     plot4paper([],'Frequency');
 end
 colormap('hot');

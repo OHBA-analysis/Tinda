@@ -1,4 +1,4 @@
-function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme,newfigure)
+function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme,newfigure,plotstate)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -10,6 +10,13 @@ if nargin<4 || isempty(color_scheme)
     color_scheme = set1_cols;
 end
 if nargin<5,  newfigure=true;   end
+arrowcol = [0 0 0] ; % or [0.8 0.8 0.8] for grey
+arrowcol2 = arrowcol;
+if exist('plotstate', 'var') && length(plotstate)==1
+  arrowcol2=arrowcol+0.8;
+else
+  plotstate=1:K;
+end
 
 disttoplot_manual = zeros(12,2);
 for i=1:12
@@ -19,12 +26,12 @@ end
 
 if newfigure
  figure('Position',[440 501 402 297]);
+else
+ axes(gca);
 end
-for ik1=1:K
+for ik1=plotstate
     for k2=1:K
         if sigpoints(ik1,k2)
-%             line([disttoplot(ik,1),disttoplot(jk,1)],[disttoplot(ik,2),disttoplot(jk,2)],...
-%                 'color',0.5*[1,1,1]);hold on;
             linescale = sqrt(sum((disttoplot_manual(k2,:)-disttoplot_manual(ik1,:)).^2));
             if linescale>1.42 % ie line is four or more steps
                 linescale = 1;
@@ -38,39 +45,25 @@ for ik1=1:K
             quivlength = linescale * sqrt(sum((disttoplot_manual(k2,:)-disttoplot_manual(ik1,:)).^2));
             if mean_direction(ik1,k2)>0 % arrow from k1 to k2:
                   quiver([disttoplot_manual(ik1,1)],[disttoplot_manual(ik1,2),],...
-                      linescale*[disttoplot_manual(k2,1)-disttoplot_manual(ik1,1)],linescale*[disttoplot_manual(k2,2)-disttoplot_manual(ik1,2)],'Color',[0 0 0],'LineWidth',2,'MaxHeadSize',0.4/quivlength);hold on;
+                      linescale*[disttoplot_manual(k2,1)-disttoplot_manual(ik1,1)],linescale*[disttoplot_manual(k2,2)-disttoplot_manual(ik1,2)],'Color',arrowcol,'LineWidth',2,'MaxHeadSize',0.4/quivlength);hold on;
             else % arrow from k2 to k1:
                 quiver(disttoplot_manual(k2,1),disttoplot_manual(k2,2),...
-                    linescale*[disttoplot_manual(ik1,1)-disttoplot_manual(k2,1)],linescale*[disttoplot_manual(ik1,2)-disttoplot_manual(k2,2)],'Color',[0 0 0],'LineWidth',2,'MaxHeadSize',0.4/quivlength);hold on;
+                    linescale*[disttoplot_manual(ik1,1)-disttoplot_manual(k2,1)],linescale*[disttoplot_manual(ik1,2)-disttoplot_manual(k2,2)],'Color',arrowcol2,'LineWidth',2,'MaxHeadSize',0.4/quivlength);hold on;
             end
         end
     end
 end
+tmpa = gca;
+msize = (0.5+tmpa.Position(3)/2)*400;
 for ik=1:K
-%     scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
-%         'MarkerFaceColor',color_scheme{ik},'MarkerEdgeColor',color_scheme{ik}); 
-    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
-        'MarkerFaceColor',[1 1 1],'MarkerEdgeColor','k'); 
+  docolor=1;
+  if docolor, edgecol = color_scheme{ik}; facecol = edgecol; else, edgecol = [0 0 0]; facecol = [1 1 1]; end
+    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),msize,...
+        'MarkerFaceColor', facecol,'MarkerEdgeColor', edgecol); 
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1.MarkerFaceAlpha = 1;%.75;
-    if ik==10
-%         scatter1 = scatter(disttoplot_manual(ik-1,1),disttoplot_manual(ik-1,2),400,...
-%         'MarkerFaceColor',color_scheme{ik-1},'MarkerEdgeColor',color_scheme{ik-1}); 
-    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
-        'MarkerFaceColor',[1 1 1],'MarkerEdgeColor','k');         
-    hold on
-        % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
-        scatter1.MarkerFaceAlpha = 0.5;
-        text(disttoplot_manual(ik-1,1)-0.03,disttoplot_manual(ik-1,2),int2str(ik-1),'FontSize',12,'FontWeight','bold');hold on;
-    end
-    if ik<10
-%         text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-        text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(clock(ik)),'FontSize',12,'FontWeight','bold');hold on;
-    else
-%         text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(clock(ik)),'FontSize',12,'FontWeight','bold');hold on;
-    end
+    text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str((ik)),'FontSize',12,'FontWeight','bold', 'FontName', 'Calibri', 'HorizontalAlignment', 'center');hold on;
 end
 axis square
 axis off
