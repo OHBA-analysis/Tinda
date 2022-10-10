@@ -252,8 +252,9 @@ else
 end
 
 %% Figure 1: Plot TINDA example
+if whichstudy==1
 iSj=5;
-whichstate=2;
+whichstate=1;
 fprintf(['\n Subject: ',int2str(iSj), ', State: ' int2str(whichstate)]);
 
 % load raw data
@@ -263,8 +264,19 @@ D = spm_eeg_load(replace(hmm.data_files{iSj}, '/Users/chiggins/data/YunzheData/R
 Gamma_subj = Gamma(hmm.subj_inds==iSj,:);
 [~,vpath_subj] = max(Gamma_subj,[],2);
 
+if 0
 % load spectral data (NNMF)
 load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
+else
+  studydir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/';
+  template_string = '5';
+  K=12;
+  [psd,coh,f] = loadMTspect(studydir,K,template_string);
+  [s1,s2,s3,s4,s5] = size(psd);
+  psd = reshape(psd, s1,s2,s3,[]);
+  psd = psd(:,:,:,find(eye(s4)));
+end
+
 
 % parcellation
 parc=parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
@@ -389,6 +401,7 @@ q = squeeze(FO(1,:,:,:));
 clear d
 cb = [256,193,1; 201, 204, 231]/256;
 for ii=1:12
+  axes(ax(4+ii))
   if any(setdiff(1:12, whichstate)==ii)
     d{1} = squeeze(FO(whichstate,ii,1,:));
     d{2} = squeeze(FO(whichstate,ii,2,:));
@@ -398,8 +411,8 @@ for ii=1:12
     ylim([0 y2(2)*1.3])
   end
   axis off
-  set(ax(4+ii), 'YTick', []);
-  set(ax(4+ii), 'XTick', []);
+  set(gca, 'YTick', []);
+  set(gca, 'XTick', []);
 end
 
 %%%%%%%%%%%%%%%%%%%%%
@@ -419,7 +432,8 @@ ax(21) = axes('Position',[0.35+0.16   0.6  0.175 0.2] ); % bottom right
 net_mean = zeros(nparcels,size(Gamma,2));
 thresh_mean = zeros(size(Gamma,2),1);
 for k = 1:size(Gamma,2)
-  net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+%   net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+    net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
 end
 net_mean=log10(net_mean);
 toplot = net_mean(:,whichstate);%-mean(net_mean,2);
@@ -438,7 +452,9 @@ ax(22) = axes('Position',[0.64+0.02 0.775 0.225 0.225] ); % left
 ax(23) = axes('Position',[0.64+0.18  0.775 0.225 0.225] ); % right
 ax(24) = axes('Position',[0.66+0.09 0.6 0.2 0.2]);% bottom
 
-graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+% graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
+graph(find(eye(38)))=0;
 tmp=squash(triu(graph));
 inds2=find(tmp>1e-10);
 data=tmp(inds2);
@@ -490,11 +506,21 @@ end
 % SAVE FIG %
 %%%%%%%%%%%%%
 save_figure(fig, [config.figdir '/1_tinda_example_state',int2str(whichstate)]);
-
+end
 %% Figure 1 Supplement: Plot each figure separately with power and coherence maps
 if whichstudy==1
   nparcels=38;
-  load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
+  if 0
+    load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
+  else % use Wide Band NNMF (CAM WHY DID YOU USE THIS??)
+    studydir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/'
+    template_string = '5';
+    K=12;
+    [psd,coh,f] = loadMTspect(studydir,K,template_string);
+    [s1,s2,s3,s4,s5] = size(psd);
+    psd = reshape(psd, s1,s2,s3,[]);
+    psd = psd(:,:,:,find(eye(s4)));
+  end
   
   cmap = colormap('inferno');
   parc_file = ['fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz'];
@@ -506,21 +532,48 @@ if whichstudy==1
   net_mean = zeros(nparcels,size(Gamma,2));
   thresh_mean = zeros(size(Gamma,2),1);
   for k = 1:size(Gamma,2)
-    net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+    %     net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+    net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
   end
   net_mean = log10(net_mean);
   
   for whichstate = 1:K
-    fig = setup_figure([],2,0.33);
+    %     fig = setup_figure([],2,0.33);
+    fig = setup_figure([],2,0.75);
     % TINDA
-    ax(1) = axes('Position', [0.03 0.1, 0.27, 0.8]+[.68 0 0 0]);
+    %     ax(1) = axes('Position', [0.71 0.1, 0.27, 0.8]);
+    ax(1) = axes('Position', [0.3 0.53, 0.4, 0.4]);
     cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),find(bestseq==whichstate),false);
     
+    ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);
+    P = squeeze(nanmean(psd(:,whichstate,:,:),4));
+    shadedErrorBar(f,mean(P,1), std(P,[],1)./sqrt(22), {'LineWidth', 2},1)
+    set(gca, 'YTick', [])
+    set(gca, 'Xtick', [10:10:40])
+    xlabel('Frequency (Hz)')
+    ylabel('PSD')
+    box off
+    
+    ax(10) = axes('Position', [0.73 0.53, 0.25, 0.4]);
+    C = reshape(coh, s1,s2,s3,[]);
+    C = C(:,:,:,find(~eye(s4)));
+    C = squeeze(nanmean(C(:,whichstate,:,:),4));
+    shadedErrorBar(f,mean(C,1), std(C,[],1)./sqrt(22), {'LineWidth', 2},1)
+    set(gca, 'YTick', [])
+    set(gca, 'Xtick', [10:10:40])
+    xlabel('Frequency (Hz)')
+    ylabel('Coherence')
+    box off
     % Power
-    ax(2) = axes('Position',[0.32    0.5  0.18 0.42]-[0.32 0 0 0]); % top left
-    ax(3) = axes('Position',[0.52  0.5  0.18 0.42]-[0.32 0 0 0]); % top right
-    ax(4) = axes('Position',[0.35  0.1 0.18 0.42]-[0.32 0 0 0]);% bottom left
-    ax(5) = axes('Position',[0.49   0.1 0.18 0.42]-[0.32 0 0 0]); % bottom right
+    %     ax(2) = axes('Position',[0    0.5  0.18 0.42]); % top left
+    %     ax(3) = axes('Position',[0.2  0.5  0.18 0.42]); % top right
+    %     ax(4) = axes('Position',[0.03  0.1 0.18 0.42]);% bottom left
+    %     ax(5) = axes('Position',[0.17   0.1 0.18 0.42]); % bottom right
+    ax(2) = axes('Position',[0    0.25  0.21 0.21]); % top left
+    ax(3) = axes('Position',[0.23  0.25  0.21 0.21]); % top right
+    ax(4) = axes('Position',[0.03  0.05 0.21 0.21]);% bottom left
+    ax(5) = axes('Position',[0.2   0.05 0.21 0.21]); % bottom right
+    
     
     toplot = net_mean(:,whichstate);%-mean(net_mean,2);
     psdthresh = min(net_mean(:)); % lowest value
@@ -533,7 +586,9 @@ if whichstudy==1
     
     
     % coherence
-    graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+    %     graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+    graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
+    graph(find(eye(38)))=0;
     tmp=squash(triu(graph));
     inds2=find(tmp>1e-10);
     data=tmp(inds2);
@@ -569,9 +624,12 @@ if whichstudy==1
     edgeLims = [1 3];
     
     viewZ = {[270,0],[-270,0],[0,90]};
-    ax(6) = axes('Position',[0.68 0.5  0.175 0.4]-[0.32 0 0 0]);
-    ax(7) = axes('Position',[0.84  0.5  0.175 0.4]-[0.32 0 0 0]);
-    ax(8) = axes('Position',[0.65 0.115 0.4 0.4]-[0.32 0 0 0]);
+    %     ax(6) = axes('Position',[0.36 0.5  0.175 0.4]);
+    %     ax(7) = axes('Position',[0.52  0.5  0.175 0.4]);
+    %     ax(8) = axes('Position',[0.33 0.115 0.4 0.4]);
+    ax(6) = axes('Position',[0.5 0.23  0.23 0.23]);cla
+    ax(7) = axes('Position',[0.75  0.23  0.23 0.23]);cla
+    ax(8) = axes('Position',[0.625 0.05 0.23 0.23]);cla;
     
     % and plot 3 way brain graphs:
     for iplot=1:3
@@ -586,7 +644,7 @@ if whichstudy==1
       colormap(ax(ii), 'inferno')
     end
     
-    save_figure(fig, [config.figdir '/1supp_tinda_state',int2str(whichstate)]);
+        save_figure(fig, [config.figdir '/1supp_tinda_state',int2str(whichstate)]);
   end
 end
 
@@ -867,7 +925,7 @@ for k=1:num_nodes+1
     ylim([min(p), max(p)*1.05]), ylim([1 ixf])
     view([90,-90])
   else
-    ax(2,k) = axes('Position', [0.6 .895-0.144*(k-1) 0.35 0.09]); 
+    ax(2,k) = axes('Position', [0.6 .895-0.144*(k-1) 0.35 0.09]);
     if k==num_nodes+1
       p = squeeze(mean(mean(a_order(:,1:ixf,:),3)))';
     else
@@ -897,7 +955,7 @@ for k=1:num_nodes+1
     toplot = b_order(k,:);
     thresh = prctile(toplot,80);
   end
-    f2 = plot_surface_4way(config.parc,toplot,0,false,'trilinear',[],thresh,[0.9*min(toplot), 1.1*max(toplot)],ax(4:5,k));
+  f2 = plot_surface_4way(config.parc,toplot,0,false,'trilinear',[],thresh,[0.9*min(toplot), 1.1*max(toplot)],ax(4:5,k));
   colormap(inferno)
 end
 save_figure([config.figdir,sprintf('3_nnmf_%s', tfrorpsd)]);
