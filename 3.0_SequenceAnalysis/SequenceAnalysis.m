@@ -5,7 +5,19 @@ if ~exist('whichstudy','var')
 end
 config = getStudyDetails(whichstudy);
 % other preliminary setup for plotting etc:
-color_scheme = set1_cols();
+if whichstudy==1 || whichstudy==2
+  color_scheme = set1_cols();
+elseif whichstudy==3 || whichstudy==5
+  tmp = brewermap(12, 'Set2');
+  for k=1:12
+    color_scheme{k} = tmp(k,:);
+  end
+elseif whichstudy==4
+  tmp = brewermap(12, 'Set3');
+  for k=1:12
+    color_scheme{k} = tmp(k,:);
+  end
+end
 
 % include option for simulations here - results to be saved in adjacent
 % folder:
@@ -14,6 +26,8 @@ if simtests
   config.figdir = strrep(config.figdir,['Study',int2str(whichstudy)],['Study',int2str(whichstudy),'_simtest']);
   mkdir(config.figdir);
 end
+use_WB_nnmf=true; % whether or not to use the wide band NNMF as in Higgins 2020 to select power and coherence (alternative is selecting 1-30 Hz)
+
 %% part 1: First level HMM statistics
 % first load data and plot basic temporal statistics:
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
@@ -176,7 +190,7 @@ end
 bestseq = bestsequencemetrics{2};
 % put the DMN state at 12 o'clock
 if whichstudy==1
-  bestseq = circshift(bestseq,1);
+  bestseq=circshift(bestseq, 12-find(bestseq==12)+1);
 end
 % save each subject's rotational strength by this metric:
 disttoplot_manual = zeros(12,1);
@@ -251,10 +265,27 @@ else
   save(nnmffile,'a','b','maxP');
 end
 
+% also fit 2 mode NNMF ()
+if use_WB_nnmf 
+  if whichstudy==1
+    load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
+  else
+    S=[];
+    S.psds(1,:,:,:,:)=P;
+    S.maxP=3; S.maxPcoh=3;
+    nnmfWB_res = teh_spectral_nnmf(S);
+    nnmfWB_res.coh_freq = mean(mean(nnmfWB_res.coh,5),4);
+    nnmfWB_res = rmfield(nnmfWB_res, 'coh');
+    save([config.figdir, 'embedded_HMM_K125_nnmfWB.mat'],'nnmfWB_res')
+  end
+end
+  
+
+
 %% Figure 1: Plot TINDA example
 if whichstudy==1
 iSj=5;
-whichstate=1;
+whichstate=2;
 fprintf(['\n Subject: ',int2str(iSj), ', State: ' int2str(whichstate)]);
 
 % load raw data
@@ -264,14 +295,15 @@ D = spm_eeg_load(replace(hmm.data_files{iSj}, '/Users/chiggins/data/YunzheData/R
 Gamma_subj = Gamma(hmm.subj_inds==iSj,:);
 [~,vpath_subj] = max(Gamma_subj,[],2);
 
-if 0
-% load spectral data (NNMF)
-load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
-else
+if ~use_WB_nnmf
   studydir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/';
   template_string = '5';
   K=12;
   [psd,coh,f] = loadMTspect(studydir,K,template_string);
+  % select everything up to 30 Hz
+  psd = psd(:,:,1:nearest(f,30), :,:);
+  coh = coh(:,:,1:nearest(f,30), :,:);
+  f = f(1:nearest(f, 30));
   [s1,s2,s3,s4,s5] = size(psd);
   psd = reshape(psd, s1,s2,s3,[]);
   psd = psd(:,:,:,find(eye(s4)));
@@ -279,16 +311,12 @@ end
 
 
 % parcellation
-parc=parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
-parc_file = ['fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz'];
-parcelFile = fullfile(osldir,'parcellations',parc_file);
-spatialRes = 8;
-spatialMap = nii.quickread(parcelFile, spatialRes);
-mni_coords = find_ROI_centres(spatialMap, spatialRes, 0, osldir);
+parc=config.parc;
+mni_coords = config.parc.roi_centers;
 nparcels = length(parc.labels);
 
 % Figure setup
-fig = setup_figure([],2,0.6);
+fig = setup_figure([],2,0.6); clear ax
 cmap = colormap('inferno');
 local_clim = true; % for the power maps, create a clim based on that state's range
 
@@ -339,7 +367,7 @@ hold on
 
 % annotate intervals
 cb = [256,193,1; 201, 204, 231]/256; % interval annotation colors
-fill([t1 t1 thalf thalf]./250, [0 13 13 0], cb(1,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none') % interval T1
+fill([t1-1 t1-1 thalf thalf]./250, [0 13 13 0], cb(1,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none') % interval T1
 fill([thalf thalf t2 t2]./250, [0 13 13 0], cb(2,:), 'FaceAlpha', 0.5, 'EdgeColor', 'none')% interval T2
 
 % plot vpath
@@ -358,6 +386,7 @@ ax(2).XAxis.Label.Color=[0 0 0];
 ax(2).XAxis.Label.Visible='on';
 xlabel('Time (sec)');
 ax(2).YAxis.Label.Color=[0 0 0];
+ylim(yl)
 
 %%%%%%%%%%%%%%%%
 % T1 BAR GRAPH %
@@ -432,8 +461,11 @@ ax(21) = axes('Position',[0.35+0.16   0.6  0.175 0.2] ); % bottom right
 net_mean = zeros(nparcels,size(Gamma,2));
 thresh_mean = zeros(size(Gamma,2),1);
 for k = 1:size(Gamma,2)
-%   net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+  if use_WB_nnmf
+    net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+  else
     net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
+  end
 end
 net_mean=log10(net_mean);
 toplot = net_mean(:,whichstate);%-mean(net_mean,2);
@@ -451,10 +483,12 @@ f2 = plot_surface_4way(parc,toplot,0,false,'enclosing',[],psdthresh,CL,ax(18:21)
 ax(22) = axes('Position',[0.64+0.02 0.775 0.225 0.225] ); % left
 ax(23) = axes('Position',[0.64+0.18  0.775 0.225 0.225] ); % right
 ax(24) = axes('Position',[0.66+0.09 0.6 0.2 0.2]);% bottom
-
-% graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
-graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
-graph(find(eye(38)))=0;
+if use_WB_nnmf
+  graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+else
+  graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
+  graph(find(eye(nparcels)))=0;
+end
 tmp=squash(triu(graph));
 inds2=find(tmp>1e-10);
 data=tmp(inds2);
@@ -462,7 +496,7 @@ data=tmp(inds2);
 S2=[];
 S2.data=squash(data);
 S2.do_fischer_xform=0;
-S2.pvalue_th=0.05/(38.^2);
+S2.pvalue_th=0.05/(nparcels.^2);
 S2.do_plots=0;
 graph_ggm=teh_graph_gmm_fit(S2);
 
@@ -486,7 +520,7 @@ end
 nROIs = size(graph,2);
 colorLims = [th th+1];
 sphereCols = repmat([30 144 255]/255, nROIs, 1);
-edgeLims = [2 4];
+edgeLims = [1 3];
 viewZ = {[270,0],[-270,0],[0,90]};
 
 % and plot 3 way brain graphs:
@@ -508,32 +542,20 @@ end
 save_figure(fig, [config.figdir '/1_tinda_example_state',int2str(whichstate)]);
 end
 %% Figure 1 Supplement: Plot each figure separately with power and coherence maps
-if whichstudy==1
-  nparcels=38;
-  if 0
-    load('/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/embedded_HMM_K125_nnmfWB.mat')
-  else % use Wide Band NNMF (CAM WHY DID YOU USE THIS??)
-    studydir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/'
-    template_string = '5';
-    K=12;
-    [psd,coh,f] = loadMTspect(studydir,K,template_string);
-    [s1,s2,s3,s4,s5] = size(psd);
-    psd = reshape(psd, s1,s2,s3,[]);
-    psd = psd(:,:,:,find(eye(s4)));
-  end
+
+  nparcels=config.parc.n_parcels;
   
   cmap = colormap('inferno');
-  parc_file = ['fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz'];
-  parcelFile = fullfile(osldir,'parcellations',parc_file);
-  spatialRes = 8;
-  spatialMap = nii.quickread(parcelFile, spatialRes);
-  mni_coords = find_ROI_centres(spatialMap, spatialRes, 0, osldir);
+  mni_coords = config.parc.roi_centers;
   
   net_mean = zeros(nparcels,size(Gamma,2));
   thresh_mean = zeros(size(Gamma,2),1);
   for k = 1:size(Gamma,2)
-    %     net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
-    net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
+    if use_WB_nnmf
+      net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
+    else
+      net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
+    end
   end
   net_mean = log10(net_mean);
   
@@ -546,8 +568,13 @@ if whichstudy==1
     cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),find(bestseq==whichstate),false);
     
     ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);
-    P = squeeze(nanmean(psd(:,whichstate,:,:),4));
-    shadedErrorBar(f,mean(P,1), std(P,[],1)./sqrt(22), {'LineWidth', 2},1)
+    if use_WB_nnmf
+      P = nnmfWB_res.nnmf_psd_specs(1,1:nearest(f,30));
+      f=f(1:nearest(f,30));
+    else
+      P = squeeze(nanmean(psd(:,whichstate,:,:),4));
+    end
+    shadedErrorBar(f,mean(P,1), std(P,[],1)./sqrt(config.nSj), {'LineWidth', 2},1)
     set(gca, 'YTick', [])
     set(gca, 'Xtick', [10:10:40])
     xlabel('Frequency (Hz)')
@@ -555,10 +582,15 @@ if whichstudy==1
     box off
     
     ax(10) = axes('Position', [0.73 0.53, 0.25, 0.4]);
-    C = reshape(coh, s1,s2,s3,[]);
-    C = C(:,:,:,find(~eye(s4)));
-    C = squeeze(nanmean(C(:,whichstate,:,:),4));
-    shadedErrorBar(f,mean(C,1), std(C,[],1)./sqrt(22), {'LineWidth', 2},1)
+    if use_WB_nnmf
+      C = nnmfWB_res.nnmf_coh_specs(1,1:nearest(f,30));
+    else
+      [s1,s2,s3,s4,s5]=size(coh);
+      C = reshape(coh, s1,s2,s3,[]);
+      C = C(:,:,:,find(~eye(s4)));
+      C = squeeze(nanmean(C(:,whichstate,:,:),4));
+    end
+    shadedErrorBar(f,mean(C,1), std(C,[],1)./sqrt(config.nSj), {'LineWidth', 2},1)
     set(gca, 'YTick', [])
     set(gca, 'Xtick', [10:10:40])
     xlabel('Frequency (Hz)')
@@ -586,9 +618,12 @@ if whichstudy==1
     
     
     % coherence
-    %     graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
-    graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
-    graph(find(eye(38)))=0;
+    if use_WB_nnmf
+      graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
+    else
+      graph = abs(squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1)));
+      graph(find(eye(nparcels)))=0;
+    end
     tmp=squash(triu(graph));
     inds2=find(tmp>1e-10);
     data=tmp(inds2);
@@ -596,7 +631,7 @@ if whichstudy==1
     S2=[];
     S2.data=squash(data);
     S2.do_fischer_xform=0;
-    S2.pvalue_th=0.05/(38.^2);
+    S2.pvalue_th=0.05/(nparcels.^2);
     S2.do_plots=0;
     graph_ggm=teh_graph_gmm_fit(S2);
     
@@ -643,17 +678,17 @@ if whichstudy==1
     for ii=2:5
       colormap(ax(ii), 'inferno')
     end
-    
-        save_figure(fig, [config.figdir '/1supp_tinda_state',int2str(whichstate)]);
+
+    save_figure(fig, [config.figdir '/1supp_tinda_state',int2str(whichstate)]);
   end
-end
+
 
 %% Fig 1 supplement: plot as multiple individual state plots:
-% fig=setup_figure([],2,1);
+fig=setup_figure([],2,1);
 if whichstudy<4
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),[],true);
+  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),[],false);
 else
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons),[],true);
+  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons),[],false);
 end
 save_figure([config.figdir,'1supp_StatePathways']);
 
@@ -662,7 +697,7 @@ figure('Position', [440 579 114 219]);
 quiver(0,0,1,0,'Color',[0 0 0],'LineWidth',2,'MaxHeadSize',0.8);hold on;
 quiver(0,1,1,0,'Color',[0 0 0]+0.8,'LineWidth',2,'MaxHeadSize',0.8);hold on;
 axis off;
-print([config.figdir,'1supp_StatePathways_legend'], 'dpng')
+print([config.figdir,'1supp_StatePathways_legend'], '-dpng')
 
 
 
@@ -822,7 +857,7 @@ tfrorpsd = 'TFR'; % 'TFR', 'PSD'
 
 %bestseq_LP = [12     9    11     8     6     4     3     2     1     5     7    10];
 if whichstudy==1
-  bestorder = [1,6,2,3,5,4];%[5,4,2,6,3,1];
+  bestorder = [5,4,2,6,3,1];%[1,6,2,3,5,4];
 elseif whichstudy==3
   bestorder = [6,2,3,5,1,4];
 elseif whichstudy==4
@@ -905,7 +940,7 @@ for k=1:num_nodes+1
     set(gca,'YTick',freq_locs);
     ylim([1 30])
     set(gca,'YTickLabel',fliplr(freq_labels));
-    set(gca,'XTick',l/24:l/12:vidres);
+    set(gca,'XTick',vidres/24:vidres/12:vidres);
     set(gca, 'XTickLabel', strng);
     ylabel('Frequency (Hz)')
     if k==num_nodes+1
@@ -959,15 +994,62 @@ for k=1:num_nodes+1
   colormap(inferno)
 end
 save_figure([config.figdir,sprintf('3_nnmf_%s', tfrorpsd)]);
-%%
+
+
+%% FIGURE 3 ALTERNATIVE
+fig = setup_figure([],2,1.5);
+
+mP = abs(reshape(P, K,size(P,2),[]));
+mP = mP(:,:,find(eye(nparcels)));
+powbands{1} = mP(:, nearest(f,8):nearest(f,13),:);
+powbands{2} = mP(:,1:nearest(f,4),:);
+powbands{3} = mP(:,nearest(f,4):nearest(f,8),:);
+powbands{4} = mP(:, nearest(f,14):nearest(f,20),:);
+powbands{5} = mP(:, nearest(f,21):nearest(f,30),:);
+powbands{6} = mP(:,1:nearest(f,30),:);
+ttl = {'delta (1-4 Hz)', 'theta (4-8 Hz)', 'alpha (8-13 Hz)', 'beta1 (14-20 Hz)', 'beta2 (20-30 Hz)', 'total power'}
+for k=1:6
+  w = nanmean(nanmean(powbands{k},3),2);
+if 0%k~=6
+  w = w./nanmean(nanmean(powbands{6},3),2);
+end
+CL = [min(w) max(w)];
+ax(1,k) = axes('Position', [0.05 .855-0.144*(k-1) 0.14 0.14]);
+cyclicalstate_distributionplot(bestseq, w, CL);
+title(ttl{k})
+
+
+ax(2,k) = axes('Position', [0.265 .89-0.144*(k-1) 0.18 0.1]); %axis off % top left
+  ax(3,k) = axes('Position', [0.465 .89-0.144*(k-1) 0.18 0.1]); %axis off % top right
+  if k==6
+    toplot = squeeze(mean(mean(powbands{6},1),2));
+    thresh = [];
+  else
+    toplot = squeeze(mean(mean(powbands{k},1),2));
+    thresh = prctile(toplot,80);
+  end
+  f2 = plot_surface_4way(config.parc,toplot,0,false,'trilinear',[],thresh,[0.9*min(toplot), 1.1*max(toplot)],ax(2:3,k));
+  colormap(inferno)
+end
 
 
 
-% and plot:
-%nodelocs = setdiff(1:9,1:3:9);
-figure;
-nnodes=6;
 
+
+%% Figure 3 supplement: TINDA Movie
+if whichstudy==1
+  outname = [config.figdir, 'TINDA.avi'];
+  if use_WB_nnmf
+    nnmfWB_res.coh_freq(1,:,:) = squeeze(mean(mean(mean(coh,5),4),1));
+    tinda_movie(bestseq, mean_direction, sigpoints, f, nnmfWB_res, nnmfWB_res, outname)
+  else
+    studydir = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/';
+    template_string = '5';
+    K=12;
+    [psd,coh,f] = loadMTspect(studydir,K,template_string);
+    tinda_movie(bestseq, mean_direction, sigpoints, f, psd, coh, outname)
+  end
+end
 
 
 
