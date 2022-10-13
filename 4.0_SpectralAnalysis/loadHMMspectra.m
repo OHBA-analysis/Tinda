@@ -1,11 +1,19 @@
-function [P,f] = loadHMMspectra(config,whichstudy,hmm,run_inds,FO_sj)
+function [power,coherence,f] = loadHMMspectra(config,whichstudy,hmm,run_inds,FO_sj,load_average)
 % this function loads the subject-average state spectra associaed with the
 % model fit details specified by the config file.
+if whichstudy==4 || whichstudy==5
+  error('This function hasnt yet been adapted to these studies. Work out how to get the full data')
+end
+if nargin<6
+  load_average=true;
+end
 waveletfolder = [config.hmmfolder,'WTspect/'];
 averagespectfile = [waveletfolder,'averagespect.mat'];
-if isfile(averagespectfile)
+if isfile(averagespectfile) && load_average
     load(averagespectfile)
     fprintf(['Average state spectra loaded from file: ',averagespectfile]);
+    power = P;
+    coherence = [];
 else
     if ~isdir(waveletfolder)
         mkdir(waveletfolder)
@@ -26,10 +34,12 @@ else
         % note these need to be reordered:
         load([config.hmmfolder,config.hmmfilename],'new_state_ordering');
         psd_temp = wt.psd;
+        coh_temp = wt.coh;
         for k=1:length(new_state_ordering)
             wt.psd(:,k,:,:,:) = psd_temp(:,new_state_ordering(k),:,:,:);
+            wt.coh(:,k,:,:,:) = coh_temp(:,new_state_ordering(k),:,:,:);
         end
-        clear psd_temp;
+        clear psd_temp coh_temp;
         % and compute:
         P = zeros(60,config.parc.n_parcels,config.parc.n_parcels,hmm.K);
         Pweighted = zeros(60,config.parc.n_parcels,config.parc.n_parcels,hmm.K);
@@ -42,6 +52,8 @@ else
                 P(:,:,:,k) = P(:,:,:,k) + permute(wt.psd(i,k,:,:,:),[3,4,5,1,2]);
             end
         end
+        P2 = wt.psd;
+        coh = wt.coh;
         Pweighted = permute(Pweighted,[4,1,2,3]);
         P = permute(P,[4,1,2,3]);
         for k=1:12
@@ -56,7 +68,7 @@ else
             nch = config.parc.n_parcels;
         else
             nF = 88;
-            nSj = 300;
+            nSj = 600;
             nch = config.parc.n_parcels;
         end
         P = zeros(nF,nch,nch,12);
@@ -74,6 +86,8 @@ else
             for k=1:12
                 Pweighted(:,:,:,k) = Pweighted(:,:,:,k) + FO_sj(i,k)*fitmt_subj.state(k).psd;
                 P(:,:,:,k) = P(:,:,:,k) + fitmt_subj.state(k).psd;
+                P2(:,:,:,k,i) = fitmt_subj.state(k).psd;
+                coh(:,:,:,k,i) = fitmt_subj.state(k).coh;
             end
         end
         Pweighted = permute(Pweighted,[4,1,2,3]);
@@ -83,8 +97,21 @@ else
         end
         P = P./i;
         f = fitmt_subj.state(1).f;
+        if whichstudy==3
+          [s1,s2,s3,s4,s5]=size(P2);
+          P2 = permute(squeeze(nanmean(reshape(P2, s1,s2,s3,s4,3,config.nSj),5)), [5,4,1,2,3]);
+          coh = permute(squeeze(nanmean(reshape(coh, s1,s2,s3,s4,3,config.nSj),5)), [5,4,1,2,3]);
+        end
     end
     save(averagespectfile,'P','Pweighted','f');
+    if load_average
+      power = P;
+      coherence = squeeze(nanmean(coh));
+    else
+      power = P2;
+      coherence = coh;
+    end
+    
 end
 
 end
