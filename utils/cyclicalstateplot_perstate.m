@@ -1,4 +1,4 @@
-function ax = cyclicalstateplot_perstate(ordering,mean_direction,sigpoints,plotstates,newfigure)
+function ax = cyclicalstateplot_perstate(ordering,mean_direction,sigpoints,plotstates,newfigure,color_scheme)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -19,7 +19,9 @@ else
  axes(gca);
 end
 
-color_scheme = set1_cols;
+if nargin<6
+    color_scheme = set1_cols;
+end
 disttoplot_manual = zeros(12,2);
 for i=1:12
   temp = exp(sqrt(-1)*(i+2)/12*2*pi);

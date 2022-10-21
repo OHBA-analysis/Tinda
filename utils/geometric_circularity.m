@@ -1,4 +1,4 @@
-function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric_circularity(mean_direction, sigpoints, nperm, clockdir, doplot)
+function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric_circularity(bestseq, mean_direction, sigpoints, nperm, clockdir, doplot,color_scheme)
 % this function provides a measure of how geometrical circular a directed
 % graph is. It is based on the directed (i.e., clockwise vs. counter
 % clockwise) distance between connected nodes. For perfect circles, the
@@ -36,17 +36,24 @@ function [circularity, pval, circularity_perm, permuted_graphs, fig] = geometric
 %
 % Copyright Mats van Es, University of Oxford, August 2022.
 
-if nargin<3 || isempty(nperm)
+mean_direction_orig = mean_direction;
+sigpoints_orig = sigpoints;
+mean_direction = mean_direction(bestseq, bestseq);
+sigpoints = sigpoints(bestseq, bestseq);
+if nargin<4 || isempty(nperm)
   nperm = 1000;
 end
-if nargin>=4 && ischar(clockdir) && strcmp(clockdir, 'auto')
+if nargin>=5 && ischar(clockdir) && strcmp(clockdir, 'auto')
   clockdir = sign(mean(sign(mean_direction(:))));% determine whether the mean
 % circle direction is clockwise (1) or counter clockwise (-1)
 else
   clockdir = 1;
 end
-if nargin<5 || isempty(doplot)
+if nargin<6 || isempty(doplot)
   doplot = 1;
+end
+if ~exist('color_scheme', 'var')
+  color_scheme=[];
 end
 
 if all(sigpoints(:)==0)
@@ -54,7 +61,7 @@ if all(sigpoints(:)==0)
   pval=nan;
   circularity_perm=[];
   permuted_graphs=[];
-  fig=figure;
+  fig=setup_figure([],2,0.75);
   return
 end
 
@@ -156,22 +163,22 @@ if doplot
   fig=figure; 
   
   % plot the cycle with the smallest phasejump in the permutation
-  subplot(2,3,1)
-  cyclicalstateplot(1:K,mean_direction, sigpoints, [], false);
+  ax=axes('Position', [0.05 0.5 0.2134 0.3412]);
+  cyclicalstateplot(bestseq, mean_direction_orig, sigpoints_orig, color_scheme, false);
   title(sprintf('empirical cycle plot \n circularity = %s \n', num2str(round(circularity, 2))))
   [~,ix] = min(mean_phasejump_perm);
   
   
-  subplot(2,3,4)
-  cyclicalstateplot(1:K,permuted_graphs{ix}, abs(permuted_graphs{ix}), [], false);
-  title(sprintf('max permutation  circularity \n circularity = %s \n', num2str(round(max(circularity_perm),2))))
+  ax(2) = axes('Position', [0.05    0.05    0.2134    0.3412]);
+  cyclicalstateplot(bestseq,permuted_graphs{ix}, abs(permuted_graphs{ix}), color_scheme, false);
+  title(sprintf('max permutation \n circularity = %s \n', num2str(round(max(circularity_perm),2))))
   
-  subplot(2,3,[2,5])
+  ax(3) = axes('Position', [0.3608    0.1100    0.2634    0.75]);
   histogram(mean_phasejump_perm)
   hold on, vline(mean_phasejump), title(sprintf('empirical mean phase \n jump vs. permutations'))
   xlabel('Radians'), ylabel('count'), xlim([0 2*pi])
   
-  subplot(2,3,[3,6])
+  ax(4) = axes('Position', [0.6916 0.1100 0.2634 0.75]);
   histogram(circularity_perm)
   hold on, vline(circularity), title(sprintf('empirical circularity \n vs. permutations'))
   xlabel('Circularity'), ylabel('count'), xlim([0, 1.1])
