@@ -20,8 +20,7 @@ elseif width==1.5
 elseif width==2
   picturewidth = 19; 
 end
-set(findall(fig,'-property','FontSize'),'FontSize',14) % adjust fontsize to your document
-set(findall(fig,'-property','FontName'),'FontName','Calibri')
+set_font(10)
 
 set(findall(fig,'-property','Box'),'Box',box) % optional
 set(findall(fig,'-property','Interpreter'),'Interpreter','latex') 
