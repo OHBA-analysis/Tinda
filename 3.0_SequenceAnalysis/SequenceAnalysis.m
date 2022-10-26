@@ -203,7 +203,7 @@ if strcmp(config.reordering_states, 'coherence')
 else
   optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
 end
-if ~isfile(optimalseqfile)
+if 1%~isfile(optimalseqfile)
   bestsequencemetrics = optimiseSequentialPattern(FO);
   save(optimalseqfile,'bestsequencemetrics');
 else
@@ -250,9 +250,15 @@ if whichstudy==3
   if strcmp(config.reordering_states, 'coherence')
     if ~isfile(fname)
       [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[],false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'ascend');
+      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
       save(fname, 'new_state_ordering')
+      P = pow_no_ordering(:, new_state_ordering,:,:,:);
+      coh = coh_no_ordering(:, new_state_ordering,:,:,:);
+    else
+      [P, coh, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[], false);
     end
+  else
+    [P, coh, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[], false);
   end
   [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[],false);
 elseif whichstudy==4
@@ -265,12 +271,12 @@ elseif whichstudy==4
   if strcmp(config.reordering_states, 'coherence')
     if ~isfile(fname)
       [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'ascend');
+      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
       save(fname, 'new_state_ordering')
       P = pow_no_ordering(:, new_state_ordering,:,:,:);
       coh = coh_no_ordering(:, new_state_ordering,:,:,:);
     else
-      [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj);
+      [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false);
     end
   else
     [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false);
@@ -280,7 +286,7 @@ else
   if strcmp(config.reordering_states, 'coherence')
     if ~isfile(fname)
       [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,hmm.subj_inds,[],false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'ascend');
+      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
       save(fname, 'new_state_ordering')
     end
   end
@@ -331,7 +337,7 @@ end
 
 fig = setup_figure([],1,.75); hold on
 for k=1:K
-    scatter(log(squeeze(nanmean(nanmean(psd(:,k,:,:),4),3))), log(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+    scatter((squeeze(log10(nanmean(nanmean((psd(:,k,:,:)),4),3)))), log10(squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
   l{k} = sprintf('State %d', k);
 end
 % axis off
@@ -344,13 +350,15 @@ legend(l, 'Location', 'EastOutside', 'NumColumns', 1)
 box off
 axis square
 set_font(10, {'label', 'title'})
-xlim([min(min(log(squeeze(nanmean(nanmean(psd,4),3)))))*0.95, max(max(log(squeeze(nanmean(nanmean(psd,4),3)))))*1.05])
-ylim([min(min(log(squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max(log(squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95])
+xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
+ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
 
 save_figure([config.figdir,'1supp_PSDvsCoh'] )
 
 
 %% fit NNMF over space and find modes:
+
+if use_WB_nnmf
 P2 = reshape(squeeze(mean(psd,1)),[12*size(Pmean,2),config.parc.n_parcels]);
 
 maxP = 6;
@@ -377,13 +385,13 @@ else
   save(nnmffile,'a','b','maxP', 'f');
 end
 
-
+end
 
 %% Figure 1: Plot TINDA example
 if whichstudy==1
   iSj=5;
   if strcmp(config.reordering_states, 'coherence')
-    whichstate=12;
+    whichstate=1;
   else
     whichstate=2;
   end
@@ -413,7 +421,7 @@ if whichstudy==1
   ax(1) = axes('Position', [.1 .55 .25 .4]); hold on
   
   tlength=720;
-  if (whichstate==1 && strcmp(config.reordering_states, 'replay')) || (whichstate==11 && strcmp(config.reordering_states, 'coherence'))
+  if (whichstate==1 && strcmp(config.reordering_states, 'coherence')) || (whichstate==11 && strcmp(config.reordering_states, 'coherence'))
     tstart=34300;
     % this is the interval we'll plot TINDA for
     t1 = 106;
@@ -560,7 +568,7 @@ if whichstudy==1
     if use_WB_nnmf
       net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
     else
-      net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
+      net_mean(:,k) = squeeze(nanmean(nanmean((psd(:,k,:,:)),3),1))';
     end
   end
   net_mean=log10(net_mean);
@@ -582,10 +590,11 @@ if whichstudy==1
   if use_WB_nnmf
     graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
   else
-    graph = squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1));
+    graph = squeeze(nanmean(nanmean((coh(:,whichstate,:,:,:)),3),1));
     graph(diagselect)=0;
   end
-  graph_mean = squeeze(nanmean(nanmean(nanmean(coh,3),1),2));
+  graph_mean = squeeze(nanmean(nanmean(nanmean((coh),3),1),2));
+  graph_mean(diagselect)=0;
   [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, graph_mean);
   
   
@@ -599,7 +608,7 @@ if whichstudy==1
   %%%%%%%%%%%%%
   set_font(10, {'label', 'title'})
   save_figure(fig, [config.figdir '/1_tinda_example_state',int2str(whichstate)]);
-  close
+%   close
 end
 %% Figure 1 Supplement: Plot each figure separately with power and coherence maps
 parc=config.parc;
@@ -607,6 +616,11 @@ nparcels=config.parc.n_parcels;
 local_clim=1;
 cmap = colormap('inferno');
 mni_coords = config.parc.roi_centers;
+if whichstudy==4
+alpha = 0.0000001;
+else
+  alpha = 0.05;
+end
 
 net_mean = zeros(nparcels,K);
 thresh_mean = zeros(K,1);
@@ -614,26 +628,25 @@ for k = 1:K
   if use_WB_nnmf
     net_mean(:,k) = squeeze(nnmfWB_res.nnmf_psd_maps(k,1,:))';
   else
-    net_mean(:,k) = squeeze(nanmean(nanmean(psd(:,k,:,:),3),1))';
+    net_mean(:,k) = log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),3),1))');
   end
 end
-net_mean = log10(net_mean);
 
-graph_mean = squeeze(nanmean(nanmean(nanmean(coh,1),2),3));
+graph_mean = squeeze(nanmean(nanmean(nanmean((coh),1),2),3));
 graph_mean_triu=squash(triu(graph_mean));
 for whichstate =1:K
   fig = setup_figure([],2,0.75);
 % TINDA
   ax(1) = axes('Position', [0.3 0.53, 0.4, 0.4]);
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),find(bestseq==whichstate),false);
+  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(alpha/bonf_ncomparisons),find(bestseq==whichstate),false);
   
   ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);cla; hold on
   if use_WB_nnmf
     pow = nnmfWB_res.nnmf_psd_specs(1,1:nearest(f,30));
     f=f(1:nearest(f,30));
   else
-    powAvg = squeeze(nanmean(nanmean(psd(:,:,:,:),4),2));
-    pow = squeeze(nanmean(psd(:,whichstate,:,:),4));
+    powAvg = log10(squeeze(nanmean(nanmean(log10(psd(:,:,:,:)),4),2)));
+    pow = log10(squeeze(nanmean((psd(:,whichstate,:,:)),4)));
   end
   plot(f,mean(powAvg), '--', 'Color', [.8 .8 .8])
   shadedErrorBar(f,mean(pow,1), std(pow,[],1)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
@@ -641,7 +654,7 @@ for whichstate =1:K
   set(gca, 'Xtick', nearest(f,30)/4:nearest(f,30)/4:nearest(f,30))
   xlabel('Frequency (Hz)')
   ylabel('PSD')
-  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(psd(:,:,nearest(f,2):end,:),1),4))));
+  [yl(1) yl(2)] = bounds(log10(squash(squeeze(nanmean(nanmean((psd(:,:,nearest(f,2):end,:)),1),4)))));
   ylim([0.95 1.05].*yl)
   box off
   
@@ -741,7 +754,7 @@ print([config.figdir,'1supp_StatePathways_legend'], '-dpng')
 
 %% Figure 2: plot circular diagram
 pvals=ones(12,12); for ik=1:12, for ik2=1:12, [~, pvals(ik,ik2)] = ttest(hmm_1stlevel.FO_assym(ik,ik2,:)); end, end
-if whichstudy<4
+if whichstudy~=4
   sigpoints = pvals<(0.05/bonf_ncomparisons);
 else
   sigpoints = pvals<0.0000001*(0.05/bonf_ncomparisons);
@@ -764,13 +777,20 @@ end
 simulation.mean_direction = squeeze(mean(simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:),4));
 simulation.mean_assym = squeeze(nanmean((simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:))./mean(simulation.FO,3),4));
 simulation.FO_assym = squeeze((simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:))./mean(simulation.FO,3));
+simulation.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation.FO_assym))));
 simulation.TIDA = nanmean(abs(reshape((simulation.FO_assym), K*K,[])))';
+% this is an alternative for TIDA. Taking into account the assymmetry from
+% i to j and j to i.
+% figure; boxplot([nanmean(abs(reshape((simulation.FO_assym - permute(simulation.FO_assym, [2,1,3])), K*K,[])))', nanmean(abs(reshape((hmm_1stlevel.FO_assym - permute(hmm_1stlevel.FO_assym, [2,1,3])), K*K,[])))']);
 for k=1:K
-  simulation.TIDA_perstate(:,k) = nanmean(([squeeze(simulation.FO_assym(:,k,:));squeeze(simulation.FO_assym(k,:,:))]));
+  simulation.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation.FO_assym(:,k,:));squeeze(simulation.FO_assym(k,:,:))]));
 end
-tmp = [simulation.TIDA, hmm_1stlevel.TIDA];
 
 
+
+for ext = {'FOasym','rotationalmomentum'}
+
+  
 fig = setup_figure([],2,0.5);
 clear ax
 ax(1) = axes('Position', [0.025, 0, .3, 1]);
@@ -785,58 +805,72 @@ else
 end
 text(-.3, 1.3, 'simulated')
 
+  if strcmp(ext, 'FOasym')
+    tmp = [simulation.TIDA, hmm_1stlevel.TIDA];
+    ylb = 'Mean FO asymmetry';
+    [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
+  elseif strcmp(ext, 'rotationalmomentum')
+    tmp = [simulation.rotational_momentum, hmm_1stlevel.rotational_momentum];
+    ylb = 'Rotational momentum';
+    [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1));
+  end
 ax(3) = axes('Position', [0.755, 0.15, 0.25, 0.7]); hold on
-boxplot(tmp, 'orientation', 'horizontal','Colors', 'k', 'Width', .75)
-h = flipud(findobj(gcf,'tag','Outliers'));
-for k=1:length(h)
-  if k==1
-    h(k).Color = [0, 0.4470, 0.7410];
-    tmp1=tmp(:,1); ix = find(sum(tmp1==h(k).XData,2)); tmp1(ix)=[];
-  elseif k==2
-    h(k).Color = [0.8500, 0.3250, 0.0980];
-    tmp2=tmp(:,2); ix = find(sum(tmp2==h(k).XData,2)); tmp2(ix)=[];
-  end
-end
-scatter(tmp1, ones(size(tmp1)).*(1+(rand(size(tmp1))-0.5)/2),'filled', 'MarkerFaceAlpha',0.8)
-scatter(tmp2, ones(size(tmp2)).*(2+(rand(size(tmp2))-0.5)/2),'filled', 'MarkerFaceAlpha',0.8)
-boxplot(tmp, 'orientation', 'horizontal', 'Colors', 'k', 'Width', .75) % put this back on top
-box off
-view([-90, 90])
-set(ax(3), 'YTickLabels', {'simulated', 'observed'})
-xlabel('mean FO asymmetry')
-set_font(10, {'title', 'label'})
-% save_figure([config.figdir,'2_Cyclicalpattern']);
+vline(0, '--k')
 
-% also make a boxplot seperately for each boxplot (vs simulation)
-fig = setup_figure([],2,.75);
-for whichstate=1:K
-  tmp = [simulation.TIDA_perstate(:, whichstate), hmm_1stlevel.TIDA_perstate(:,whichstate)];
-  [H{whichstate},~,~,~] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
-  subplot(4,3,whichstate), hold on
-boxplot(tmp, 'orientation', 'horizontal','Colors', 'k', 'Width', .75)
-h = flipud(findobj(gcf,'tag','Outliers'));
-for k=1:length(h)
-  if k==1
-    h(k).Color = [0, 0.4470, 0.7410];
-    tmp1=tmp(:,1); ix = find(sum(tmp1==h(k).XData,2)); tmp1(ix)=[];
-  elseif k==2
-    h(k).Color = [0.8500, 0.3250, 0.0980];
-    tmp2=tmp(:,2); ix = find(sum(tmp2==h(k).XData,2)); tmp2(ix)=[];
-  end
+clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980]};
+for k=1:2
+  scatter(ones(size(tmp(:,k))).*(k+(rand(size(tmp(:,k)))-0.5)/2),tmp(:,k), 'filled', 'MarkerFaceColor', clr{k}, 'MarkerFaceAlpha',0.6)
 end
-scatter(tmp1, ones(size(tmp1)).*(1+(rand(size(tmp1))-0.5)/2),4,'filled', 'MarkerFaceAlpha',0.8)
-scatter(tmp2, ones(size(tmp2)).*(2+(rand(size(tmp2))-0.5)/2),4,'filled', 'MarkerFaceAlpha',0.8)
-boxplot(tmp, 'orientation', 'horizontal', 'Colors', 'k', 'Width', .75) % put this back on top
-if H{whichstate}
-  plot([0.34 0.34], [1,2], 'k')
-  plot(0.35, 1.5, '*k')
+h=boxplot(tmp, 'Colors', 'k', 'Width', .75, 'whisker', 1000); % put this back on top
+set(h, 'linew', 2)
+box off
+if stat.H
+  sigstar({[1,2]}, stat.P)
+end
+set(ax(3), 'XTickLabels', {'simulated', 'observed'})
+ylabel(ylb)
+set_font(10, {'title', 'label'})
+fname = [config.figdir,'2_Cyclicalpattern_', ext{1}];
+save_figure(fname);
+save([fname, 'stat'], 'stat')
+end
+
+
+% also make a boxplot seperately for each state (vs simulation)
+clear stat
+fig = setup_figure([],2,.75);
+for whichstate=1:K+1
+  if whichstate==K+1
+    fig = setup_figure([],1,.6); hold on;
+    tmp = [simulation.TIDA, hmm_1stlevel.TIDA];
+  else
+    subplot(4,3,whichstate), hold on
+    tmp = [simulation.TIDA_perstate(:, whichstate), hmm_1stlevel.TIDA_perstate(:,whichstate)];
+  end
+  [stat{whichstate}.H, stat{whichstate}.P, stat{whichstate}.CI, stat{whichstate}.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
+  clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980]};
+for k=1:2
+  scatter(ones(size(tmp(:,k))).*(k+(rand(size(tmp(:,k)))-0.5)/2),tmp(:,k),'filled', 'MarkerFaceAlpha',0.6)
+end
+boxplot(tmp, 'Colors', 'k', 'Width', .75, 'whisker', 1000) % put this on top
+if stat{whichstate}.H
+  sigstar({[1,2]}, stat{whichstate}.P)
 end
 box off
-view([-90, 90])
-xlim([-.36, 0.36])
-set(gca, 'YTickLabels', {'simulated', 'observed'})
+% ylim([-.36, 0.36])
+set(gca, 'XTickLabels', {'simulated', 'observed'})
+ylabel({'Mean FO asym'})
+if whichstate==K
+  fname=[config.figdir,'2supp_TIDA_perstate'];
+  save_figure(fname);
+  save([fname, 'stat'], 'stat')
+elseif whichstate==K+1
+  fname=[config.figdir,'2supp_TIDA'];
+  save_figure(fname);
+  stat=stat{K+1};
+  save([fname, 'stat'], 'stat')
 end
-save_figure([config.figdir,'2supp_TIDA_perstate']);
+end
 
 
 % also plot the *real* circle plot individually
@@ -865,12 +899,17 @@ end
 %% Figure 2 supplement:  analyse by quartiles
 percentiles = 0:20:100;
 fig=setup_figure([],2,2);
+if whichstudy==4
+  alpha_thresh = 0.0000001;
+else
+  alpha_thresh = 0.05;
+end
 clear ax
-for ip=1:5
+for ip=1:length(percentiles)-1
   [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentiles(ip:ip+1));
   mean_direction_p = squeeze(mean(FO_p(:,:,1,:)-FO_p(:,:,2,:),4));
   ax(ip,1) = axes('Position', [-.05, 1.02-0.2*ip, 0.45, 0.15]);
-  cyclicalstatesubplot(bestseq,mean_direction_p,pvals_p<(0.05/bonf_ncomparisons));
+  cyclicalstatesubplot(bestseq,mean_direction_p,pvals_p<(alpha_thresh/bonf_ncomparisons));
   ax(ip,2) = axes('Position', [0.45, 1.03-0.196*ip, 0.5, 0.15]);
   ITmerged = cellfun(@mean,t_intervals_p);ITmerged = ITmerged./config.sample_rate;
   distributionPlot(sqrt(ITmerged),'showMM',2,'color',{color_scheme{1:size(FO,2)}});
@@ -888,6 +927,30 @@ set_font(10, {'title', 'label'})
 save_figure([config.figdir,'2supp_Cyclicalpatterns_percentiled']);
 close
 hmm_1stlevel.FO_quartile = FO_p;
+
+% Make an extra plot with median interval time vs rotational momentum?
+[FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentiles(ip:ip+1));
+
+percentiles = 5:5:95;
+for ip=1:length(percentiles)
+[FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,[percentiles(ip)-4 percentiles(ip)+5]);
+FO_assym_p = squeeze((FO_p(:,:,1,:)-FO_p(:,:,2,:))./mean(FO_p,3));
+ITmean(ip) = mean(mean(cellfun(@mean,t_intervals_p)));ITmean(ip) = ITmean(ip)./config.sample_rate;
+% ITmedian(ip) = cellfun(@median,t_intervals_p);ITmedian(ip) = ITmedian(ip)./config.sample_rate;
+rotational_momentum_p(ip,:) = squeeze(imag(nansum(nansum(angleplot.*FO_assym_p))));
+end
+
+fig = setup_figure([],2,0.6); 
+subplot(1,2,1), 
+shadedErrorBar(percentiles,mean(rotational_momentum_p,2), std(rotational_momentum_p,[],2)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
+xlabel('Percentile'), ylabel('Rotational Momentum')
+yticks([0])
+subplot(1,2,2)
+shadedErrorBar((ITmean),mean(rotational_momentum_p,2), std(rotational_momentum_p,[],2)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
+yticks([0])
+xlabel('Mean IT (s)'), ylabel('Rotational Momentum')
+save_figure([config.figdir,'2supp_Cyclicalpatterns_rotationalmomentum_percentiled']);
+close
 
 %% Figure Supplement 2: analyse by intervals >2 heartbeats long
 
@@ -936,7 +999,7 @@ set(gca,'YLim',[0 1.1*max(ITmerged(:))])
 title('Interval times');xlabel('RSN-State'), ylabel('Interval time (sec)');grid on;
 set_font(10, {'title', 'label'})
 save_figure([config.figdir,'2supp_Cyclicalpatterns_lessthan2.5sec'])
-%%
+
 hmm_1stlevel.FO_respcontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));
 
 
@@ -951,10 +1014,11 @@ end
 %% Figure 3: Spectral information in the circle plot
 
 diffmode = {'rel'};
-for relorabs = 'rel'%{'abs', 'rel'} 
-if strcmp(relorabs, 'abs')
+relorabs = {'rel', 'abs'} ;
+for ii = relorabs
+  if strcmp(ii, 'abs')
   sup = '';
-elseif strcmp(relorabs, 'rel')
+elseif strcmp(ii, 'rel')
   sup = '_relative';
 end
 
@@ -973,95 +1037,117 @@ pos([8 12],1) = pos([8 12],1) + [0.075;0.075];
 
 pos(bestseq,:) = pos;
 fig = setup_figure([],2,1);
+ax(13,1) = axes('Position', [0.295 0.19 0.38 .6]); hold on
+axes(ax(13,1))
+cyclicalstateplot(bestseq,mean_direction, zeros(12), color_scheme, false,[],true)
+coh_avg = squeeze(nanmedian(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),1),2));
+% pow_avg = squeeze(nanmedian(nanmean(nanmean(log10(psd),4),1),2));
+pow_avg = squeeze(nanmedian(nanmean(nanmean((psd),4),1),2));
 
-coh_avg = squeeze(nanmedian(nanmean(nanmean(coh(:,:,:,offdiagselect),4),1),2));
-pow_avg = squeeze(nanmedian(nanmean(nanmean(psd,4),1),2));
 for k=1:12
+coh_state = squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),1));
+pow_state = squeeze(nanmean(nanmean((psd(:,k,:,:)),4),1));
 
-
-coh_state = squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),1));
-pow_state = squeeze(nanmean(nanmean(psd(:,k,:,:),4),1));
-ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
+ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
 yyaxis left
 tmpP = pow_state;
 if strcmp(diffmode, 'rel')
-  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(psd(:,:,nearest(f,3):end,:),1),4))./repmat(pow_avg(nearest(f,3):end), 1,K)'));
-  tmpP = sqrt(tmpP./pow_avg);
-  yl = sqrt(yl);
+  tmpP = log10(tmpP./pow_avg);
+  [yl(1) yl(2)] = bounds(squash(log10(squeeze(nanmean(nanmean((psd(:,:,:,:)),4),1))./pow_avg')));
 else
-  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(psd(:,:,nearest(f,3):end,:),1),4))));
+  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(log10(psd(:,:,nearest(f,3):end,:)),1),4))));
 end
 
-if strcmp(relorabs, 'rel')
+if strcmp(ii, 'rel')
   plot(sqrtf,tmpP, 'LineWidth',2);
   set_sqrt_ax(f)
-elseif strcmp(relorabs, 'abs')
+elseif strcmp(ii, 'abs')
   plot(f,tmpP, 'LineWidth',2);
 end
-  hline(1)
+  hline(0)
 
-ylim([0.95,1.05].*yl)
+% ylim([0.95,1.05].*yl)
+ylim([1.05,1.05].*yl)
 
 yticks([])
 ylabel('PSD')
 yyaxis right
 tmpC = coh_state;
 if strcmp(diffmode, 'rel')
-  tmpC = sqrt(tmpC./coh_avg);
-%   [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(coh(:,:,nearest(f,3):end,offdiagselect),1),4))./repmat(coh_avg(nearest(f,3):end), 1,K)'));
-%   yl=sqrt(yl);
+  tmpC = log10(tmpC./coh_avg);
 else
-  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(coh(:,:,nearest(f,3):end,offdiagselect),1),4))));
+  [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean((coh(:,:,nearest(f,3):end,offdiagselect)),1),4))));
 end
 
-if strcmp(relorabs, 'rel')
+if strcmp(ii, 'rel')
   plot(sqrtf,tmpC, 'LineWidth',2);
   xlim(sqrt([f(1) 30]))
   set_sqrt_ax(f)
-elseif strcmp(relorabs, 'abs')
+elseif strcmp(ii, 'abs')
  plot(f,tmpC, 'LineWidth',2);
  xlim([f(1) 30])
 end
-ylim([0.95 1.05].*yl)
-hline(1)
+ylim([1.05 1.05].*yl)
+hline(0)
 
 ylabel('Coh')
 yticks([])
 
 box off
-if k<10
-  if strcmp(relorabs, 'rel')
-    text(0,1.4, sprintf('%d',k))
-  else
-  text(-5,1.4, sprintf('%d',k))
-  end
-else
-  if strcmp(relorabs, 'rel')
-    text(-.2,1.4, sprintf('%d',k))
-  else
-  text(-7,1.4, sprintf('%d',k))
-  end
-end
+% if k<10
+%   if strcmp(ii, 'rel')
+%     if whichstudy==1 || whichstudy==3
+%     text(0,0.35, sprintf('%d',k))
+%     elseif whichstudy==4
+%       text(0.2,0.5, sprintf('%d',k))
+%     end
+%     %     text(0,1.4, sprintf('%d',k))
+%   else
+%     if whichstudy==1 || whichstudy==3
+%       text(-5,.35, sprintf('%d',k))
+%     elseif whichstudy==4
+%       text(-4,.5, sprintf('%d',k))
+%     end
+%   end
+% else
+%   if strcmp(ii, 'rel')
+%     if whichstudy==1 || whichstudy==3
+%     %     text(-.2,1.4, sprintf('%d',k))
+%     text(-.2,0.35, sprintf('%d',k))
+%     elseif whichstudy==4
+%       text(-.3,0.5, sprintf('%d',k))
+%     end
+%   else
+%     if whichstudy==1 || whichstudy==3
+%       text(-7,.35, sprintf('%d',k))
+%     elseif whichstudy==4
+%       text(-6,.5, sprintf('%d',k))
+%     end
+%   end
+% end
 
-
-toplot = net_mean(:,k);%-mean(net_mean,2);
+toplot = log10(squeeze(nanmean(nanmean(psd(:,k,:,:),3),1)));
 coords_left = mni_coords(:,1)<0;
 thresh = prctile(toplot,75);
 % project the right side to the left side (all non thresholded values are shown on the left projection)
-toplot(1:2:end) = max([toplot(1:2:end), toplot(2:2:end)],[],2);
+toplot(1:2:end) = max([toplot(1:2:end), toplot(2:2:end)],[],2, 'omitnan');
 toplot(toplot<thresh)=NaN;
-CL = [min(squash(toplot(:,:))) max(squash(toplot(:,:)))];
+
+[CL(1), CL(2)] = bounds(squash(log10(squeeze((nanmean(nanmean(psd,3),1))))));
 ax(k,1) = axes('Position', [0 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
-% plot_surface_4way(parc,toplot,1,true,'trilinear', [],[],CL, ax(k,1))
-colormap(inferno)
+% plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)*0.9,CL, ax(k,1))
+cmap = colormap(inferno);
+colormap(cmap(50:end,:))
+
 end
+%%
 set_font(10, {'label', 'title'})
-% save_figure([config.figdir,'3_Spectral_circle', sup], false)
+save_figure([config.figdir,'3_Spectral_circle', sup], false)
 
 ax(11,1) = axes('Position', [0.375, 0.45, 0.25, 0.25]); hold on
 clear l
 for k=1:K
-    scatter(log(squeeze(nanmean(nanmean(psd(:,k,:,:),4),3))), log(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+    scatter(log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),4),3))), log10(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
   l{k} = sprintf('State %d', k);
 end
 % axis off
@@ -1072,14 +1158,14 @@ xticks([])
 xlabel('PSD')
 box off
 axis square
-xlim([min(min(log(squeeze(nanmean(nanmean(psd,4),3)))))*0.95, max(max(log(squeeze(nanmean(nanmean(psd,4),3)))))*1.05])
-ylim([min(min(log(squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max(log(squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95])
+xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
+ylim(log10([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
 
 leg = legend(l, 'Location', 'SouthOutside', 'NumColumns', 2);
 leg.Position(1) = 0.375;
 leg.Position(2) = 0.275;
 set_font(10, {'label', 'title'})
-% save_figure([config.figdir,'3_Spectral_circle_with_scatter', sup], false)
+save_figure([config.figdir,'3_Spectral_circle_with_scatter', sup], false)
 end
 
 %% Figure 3: PSD Modes
