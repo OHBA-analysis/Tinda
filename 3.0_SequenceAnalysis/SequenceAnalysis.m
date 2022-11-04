@@ -893,7 +893,39 @@ for k=1:size(tmp,3)
   [hmm_1stlevel.circularity_subject(k,1), hmm_1stlevel.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(bestseq, tmp(:, :,k), sigpoints,[],[],0, color_scheme);
 end
 
+%% Alternatively, do the FO assym on the group level
+[FO_all,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{cat(1,hmmT{:})},K);
 
+% we can either simulate the vpath based on the group level transprob, or
+% the individual vpath
+% let do the group:
+for sim=1:100
+  sim
+  clear hmmT_sim vpath_sim
+if 1
+  hmmT_sim = cat(1,hmmT{:});
+  vpath_sim = simulateVpath(cat(1,vpath{:}),hmmT_sim,K);
+else
+  hmmT_sim = hmmT;
+  for k=1:length(vpath)
+    vpath_sim{k} = simulateVpath(vpath{k},hmmT_sim{k},K);
+  end
+  vpath_sim = cat(1,vpath_sim{:});
+  hmmT_sim = cat(1,hmmT_sim{:});
+end
+[FO_all_sim{sim}, ~, ~] = computeLongTermAsymmetry({vpath_sim},{hmmT_sim},K);
+end
+FO_all_sim = cat(4,FO_all_sim{:});
+
+
+FO_all_asym=FO_all(:,:,1)-FO_all(:,:,2);
+FO_all_asym_perm = squeeze(FO_all_sim(:,:,1,:)-FO_all_sim(:,:,2,:));
+a = [];
+for k=1:12
+  for l=1:12
+    a(k,l) = sum(FO_all_asym(k,l)>squeeze(FO_all_asym_perm(k,l,:)));
+  end
+end
 
 
 %% Figure 2 supplement:  analyse by quartiles
@@ -1013,14 +1045,21 @@ end
 
 %% Figure 3: Spectral information in the circle plot
 
-diffmode = {'rel'};
-relorabs = {'rel', 'abs'} ;
-for ii = relorabs
-  if strcmp(ii, 'abs')
-  sup = '';
-elseif strcmp(ii, 'rel')
-  sup = '_relative';
-end
+diffmode = {'rel'}; % whether to plot psd/coh relative to average over states
+use_sqrt_f = [true, false] ; % whether to plot PSD/coh with sqrt of f axis
+statecolor = [true, false]; % whether to plot PSD/coh in the state color
+for sc = statecolor 
+  if sc
+    sup2 = '_statecolor';
+  else
+    sup2 = '_samecolor';
+  end
+for ii = use_sqrt_f
+  if ii
+  sup1 = '_sqrtax';
+  else
+  sup1 = '_linax';
+  end
 
 pos = zeros(12,2);
 for i=1:12
@@ -1045,24 +1084,39 @@ coh_avg = squeeze(nanmedian(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),1),2))
 pow_avg = squeeze(nanmedian(nanmean(nanmean((psd),4),1),2));
 
 for k=1:12
+  ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
+  yyaxis left
+  yyaxis right
+  if sc
+    cl{1} = color_scheme{k};
+    cl{2} = cl{1};
+    linestyle = ':';
+    ax(k,2).YAxis(1).Color = 'k';
+    ax(k,2).YAxis(2).Color = 'k';
+  else
+    cl{1} = [0 0.4470 0.7410];
+    cl{2} = [0.8500 0.3250 0.0980];
+    linestyle = '-';
+  end
 coh_state = squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),1));
 pow_state = squeeze(nanmean(nanmean((psd(:,k,:,:)),4),1));
 
-ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
 yyaxis left
 tmpP = pow_state;
 if strcmp(diffmode, 'rel')
   tmpP = log10(tmpP./pow_avg);
-  [yl(1) yl(2)] = bounds(squash(log10(squeeze(nanmean(nanmean((psd(:,:,:,:)),4),1))./pow_avg')));
+  [ylt(1) ylt(2)] = bounds(squash(log10(squeeze(nanmean(nanmean((psd(:,:,:,:)),4),1))./pow_avg')));
+  [ylt(3) ylt(4)] = bounds(squash(log10(squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),1))./coh_avg')));
+  [yl(1) yl(2)] = bounds(ylt);
 else
   [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean(log10(psd(:,:,nearest(f,3):end,:)),1),4))));
 end
 
-if strcmp(ii, 'rel')
-  plot(sqrtf,tmpP, 'LineWidth',2);
+if ii
+  plot(sqrtf,tmpP, 'LineWidth',2, 'Color', cl{1});
   set_sqrt_ax(f)
-elseif strcmp(ii, 'abs')
-  plot(f,tmpP, 'LineWidth',2);
+else
+  plot(f,tmpP, 'LineWidth',2, 'Color', cl{1});
 end
   hline(0)
 
@@ -1070,7 +1124,11 @@ end
 ylim([1.05,1.05].*yl)
 
 yticks([])
-ylabel('PSD')
+if sc
+  ylabel(['PSD ' char(8212)]);
+else
+  ylabel('PSD');
+end
 yyaxis right
 tmpC = coh_state;
 if strcmp(diffmode, 'rel')
@@ -1079,52 +1137,24 @@ else
   [yl(1) yl(2)] = bounds(squash(squeeze(nanmean(nanmean((coh(:,:,nearest(f,3):end,offdiagselect)),1),4))));
 end
 
-if strcmp(ii, 'rel')
-  plot(sqrtf,tmpC, 'LineWidth',2);
+if ii
+  plot(sqrtf,tmpC, 'LineWidth',2, 'Color', cl{2}, 'LineStyle', linestyle);
   xlim(sqrt([f(1) 30]))
   set_sqrt_ax(f)
-elseif strcmp(ii, 'abs')
- plot(f,tmpC, 'LineWidth',2);
+else
+ plot(f,tmpC, 'LineWidth',2, 'Color', cl{2}, 'LineStyle', linestyle);
  xlim([f(1) 30])
 end
 ylim([1.05 1.05].*yl)
 hline(0)
 
-ylabel('Coh')
+if sc
+  ylabel(['Coh ' '---']);
+else
+  ylabel('Coh');
+end
 yticks([])
-
 box off
-% if k<10
-%   if strcmp(ii, 'rel')
-%     if whichstudy==1 || whichstudy==3
-%     text(0,0.35, sprintf('%d',k))
-%     elseif whichstudy==4
-%       text(0.2,0.5, sprintf('%d',k))
-%     end
-%     %     text(0,1.4, sprintf('%d',k))
-%   else
-%     if whichstudy==1 || whichstudy==3
-%       text(-5,.35, sprintf('%d',k))
-%     elseif whichstudy==4
-%       text(-4,.5, sprintf('%d',k))
-%     end
-%   end
-% else
-%   if strcmp(ii, 'rel')
-%     if whichstudy==1 || whichstudy==3
-%     %     text(-.2,1.4, sprintf('%d',k))
-%     text(-.2,0.35, sprintf('%d',k))
-%     elseif whichstudy==4
-%       text(-.3,0.5, sprintf('%d',k))
-%     end
-%   else
-%     if whichstudy==1 || whichstudy==3
-%       text(-7,.35, sprintf('%d',k))
-%     elseif whichstudy==4
-%       text(-6,.5, sprintf('%d',k))
-%     end
-%   end
-% end
 
 toplot = log10(squeeze(nanmean(nanmean(psd(:,k,:,:),3),1)));
 coords_left = mni_coords(:,1)<0;
@@ -1135,16 +1165,13 @@ toplot(toplot<thresh)=NaN;
 
 [CL(1), CL(2)] = bounds(squash(log10(squeeze((nanmean(nanmean(psd,3),1))))));
 ax(k,1) = axes('Position', [0 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
-% plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)*0.9,CL, ax(k,1))
+plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)*0.9,CL, ax(k,1))
 cmap = colormap(inferno);
 colormap(cmap(50:end,:))
 
 end
-%%
-set_font(10, {'label', 'title'})
-save_figure([config.figdir,'3_Spectral_circle', sup], false)
 
-ax(11,1) = axes('Position', [0.375, 0.45, 0.25, 0.25]); hold on
+ax(11,1) = axes('Position', [0.375, 0.38, 0.25, 0.25]); hold on
 clear l
 for k=1:K
     scatter(log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),4),3))), log10(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
@@ -1161,158 +1188,11 @@ axis square
 xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
 ylim(log10([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
 
-leg = legend(l, 'Location', 'SouthOutside', 'NumColumns', 2);
-leg.Position(1) = 0.375;
-leg.Position(2) = 0.275;
 set_font(10, {'label', 'title'})
-save_figure([config.figdir,'3_Spectral_circle_with_scatter', sup], false)
+save_figure([config.figdir,'3_Spectral_circle', sup1, sup2], false)
+end
 end
 
-%% Figure 3: PSD Modes
-fig = setup_figure([],2,1.5);
-usebestseq = 'bestseq'; % 'bestseq_LP'
-tfrorpsd = 'TFR'; % 'TFR', 'PSD'
-
-%bestseq_LP = [12     9    11     8     6     4     3     2     1     5     7    10];
-if whichstudy==1
-  bestorder = [5,2,4,6,3,1];%[1,6,2,3,5,4];
-elseif whichstudy==3
-  bestorder = [6,2,3,5,1,4];
-elseif whichstudy==4
-  bestorder = [1:6];
-end
-num_nodes=6;
-
-if strcmp(usebestseq, 'bestseq')
-  seq = circshift(fliplr(bestseq),1);
-  %   [~, bestorder] = sort(squeeze(mean(mean(a,2),1)), 'descend');
-elseif strcmp(usebestseq, 'bestseq_LP')
-  % find lowest power state and position at top of wheel:
-  [~,lowpower] = min(sum(Pmean,2));
-  ind = find(bestseq==lowpower);
-  bestseq_LP = [bestseq(ind:end),bestseq(1:(ind-1))];
-  seq = bestseq_LP;
-  %   [~, bestorder] = sort(squeeze(mean(mean(a,2),1)), 'ascend');
-end
-a_order = a(:,:,bestorder);
-b_order = b(bestorder,:);
-
-% set up state-freq map
-step=83;
-vidres = K*step;
-q=zeros(vidres+1,1);
-q(1:step:end) = [seq, seq(1)];
-mult = 1:-1/step:1/step;
-freq_time_map = cell(num_nodes,1);
-for k=1:vidres
-  tmp1 = mod(k, step)+1;
-  tmp2 = find(q(1:k)>0);
-  tmp3 = find(q(k+1:end)>0)+k;
-  state_i = q(tmp2(nearest(tmp2,k)));
-  state_j = q(tmp3(nearest(tmp3,k)));
-  ix = k-step*(length(tmp2)-1);
-  for inode=1:num_nodes
-    freq_time_map{inode}(:,k) = squeeze(mult(ix)*a_order(state_i,:,inode) + (1-mult(ix))*a_order(state_j,:,inode))./2;
-  end
-end
-for inode=1:num_nodes
-  freq_time_map{inode} = circshift(freq_time_map{inode}, (step+1)./2, 2);
-end
-
-% and the corresponding labels/ticks
-maxf=30;
-ixf = find(f==maxf);
-freq_labels = [0:10:maxf];
-freq_locs = [1 10 20 30];% fliplr(ixf-freq_locs+1);
-for k=1:12
-  strng{k} = num2str(seq(k));
-end
-weights = squeeze(mean(a_order,2));
-
-for k=1:num_nodes+1
-  % start with circle plots showing contributions of each state to a mode
-  if k==7
-    w = mean(weights,2);
-    CL = [min(w), max(w)];
-    ttl = 'Total Power';
-  else
-    w = weights(:,k);
-    CL = [min(weights(:)), max(weights(:))];
-    ttl = sprintf('mode %s', num2str(bestorder(k)));
-  end
-  ax(1,k) = axes('Position', [0 .855-0.144*(k-1) 0.14 0.14]);
-  cyclicalstate_distributionplot(circshift(fliplr(seq),1), w, CL);
-  title(ttl)
-  
-  % TFR plots
-  if strcmp(tfrorpsd, 'TFR')
-    ax(2,k) = axes('Position', [0.6 .895-0.144*(k-1) 0.3 0.09]); axis off
-    
-    if k==num_nodes+1
-      ft_map_average = nanmean(cat(3, freq_time_map{:}),3);
-      imagesc(1:vidres, f(1:ixf), flipud(ft_map_average(1:ixf,:)));
-    else
-      freq_time_map{k} = demean(freq_time_map{k},2);
-      imagesc(1:vidres, f(1:ixf), flipud(freq_time_map{k}(1:ixf,:)));
-    end
-    set(gca,'YTick',freq_locs);
-    ylim([1 30])
-    set(gca,'YTickLabel',fliplr(freq_labels));
-    set(gca,'XTick',vidres/24:vidres/12:vidres);
-    set(gca, 'XTickLabel', strng);
-    ylabel('Frequency (Hz)')
-    if k==num_nodes+1
-      xlabel('State')
-    end
-    
-    % PSD next to TFR
-    ax(3,k) = axes('Position', [0.905 .895-0.144*(k-1) 0.1 0.09]);
-    if k==num_nodes+1
-      p = squeeze(mean(mean(a_order(:,1:ixf,:),3)))';
-    else
-      p = squeeze(mean(a_order(:,1:ixf,k)))';
-    end
-    hold on
-    patch([ixf,ixf:-1:0;0:ixf,ixf]', [zeros(ixf+2,1) [0;p;0]], [0, 0.4470, 0.7410], 'FaceAlpha', 0.3)
-    plot(1:ixf, p, 'Color', [0, 0.4470, 0.7410], 'LineWidth',2), axis off
-    ylim([min(p), max(p)*1.05]), ylim([1 ixf])
-    view([90,-90])
-  else
-    ax(2,k) = axes('Position', [0.6 .895-0.144*(k-1) 0.35 0.09]);
-    if k==num_nodes+1
-      p = squeeze(mean(mean(a_order(:,1:ixf,:),3)))';
-    else
-      p = squeeze(mean(a_order(:,1:ixf,k)))';
-    end
-    hold on
-    
-    patch([ixf,ixf:-1:0;0:ixf,ixf]', [zeros(ixf+2,1) [0;p;0]], [0, 0.4470, 0.7410], 'FaceAlpha', 0.3)
-    plot(1:ixf, p, 'Color', [0, 0.4470, 0.7410], 'LineWidth',2),
-    ylim([min(p), max(p)*1.05]), xlim([1 ixf])
-    set(gca,'YTick',[]);
-    set(gca,'XTick',[7,14,27,40]);
-    set(gca, 'XTickLabel', {'5','10','20','30'});
-    ylabel('PSD')
-    if k==num_nodes+1
-      xlabel('Frequency (Hz)')
-    end
-  end
-  
-  % Topo plots
-  ax(4,k) = axes('Position', [0.165 .89-0.144*(k-1) 0.18 0.1]); %axis off % top left
-  ax(5,k) = axes('Position', [0.365 .89-0.144*(k-1) 0.18 0.1]); %axis off % top right
-  if k==num_nodes+1
-    toplot = mean(b_order,1);
-    thresh = [];
-  else
-    toplot = b_order(k,:);
-    thresh = prctile(toplot,80);
-  end
-  f2 = plot_surface_4way(config.parc,toplot,0,false,'trilinear',[],thresh,[0.9*min(toplot), 1.1*max(toplot)],ax(4:5,k));
-  colormap(inferno)
-end
-set_font(10, {'title', 'label'})
-save_figure([config.figdir,sprintf('3_nnmf_%s', tfrorpsd)], false);
 
 
 

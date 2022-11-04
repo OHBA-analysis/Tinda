@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout,FO_residual,pvals_residual] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm)
+function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -19,7 +19,8 @@ if ~iscell(vpath) || ~iscell(T)
 end
 nSj = length(vpath);
 FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
-if dotaskglm, FO_residual = zeros(K,K,2,nSj,length(intervalpercentiles)-1); 
+FO_all = [];
+if dotaskglm, FO_residual = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
 else, FO_residual=[]; end
 
 for iSj=1:nSj
@@ -116,18 +117,58 @@ for iSj=1:nSj
   end
 end
 
-% paired t-tests to evaluate significance:
+% Do Permutation test on FO (instead of t-test)
+
+dat1=[];
+dat1.dimord = 'rpt_chan_time';
+dat1.label{1} = 'FO asym';
+dat1.time=1:(K^2-K);
+dat2=dat1;
+cfg=[];
+cfg.method = 'montecarlo';
+cfg.statistic = 'depsamplesT';
+cfg.design = [ones(1,nSj), 2*ones(1,nSj); 1:nSj, 1:nSj];
+cfg.ivar = 1;
+cfg.uvar = 2;
+cfg.numrandomization = 100000;
+
 pvals = zeros(K,K,length(intervalpercentiles)-1);
-if dotaskglm, pvals_residual = zeros(K,K,length(intervalpercentiles)-1); 
-else, pvals_residual=[]; end
+if dotaskglm
+  pvals_residual = zeros(K,K,length(intervalpercentiles)-1);
+else
+  pvals_residual=[]; stat_res=[]; 
+end
+
 for ip=1:length(intervalpercentiles)-1
-  for ik1=1:12
-    for ik2=1:12
-      [~,pvals(ik1,ik2,ip)] = ttest(squeeze(FO(ik1,ik2,1,:,ip)-FO(ik1,ik2,2,:,ip)));
-      if dotaskglm
-        [~,pvals_residual(ik1,ik2,ip)] = ttest(squeeze(FO_residual(ik1,ik2,1,:,ip)-FO_residual(ik1,ik2,2,:,ip)));
-      end
-    end
+  % do permutation test of FO
+  
+  tmp = permute(squeeze(FO(:,:,1,:,ip)), [3,1,2]);
+  dat1.trial(:,1,:) = tmp(:, ~eye(K));
+  
+  tmp = permute(squeeze(FO(:,:,2,:,ip)), [3,1,2]);
+  dat2.trial(:,1,:) = tmp(:, ~eye(K));
+  
+  stat{ip} = ft_timelockstatistics(cfg, dat1, dat2);
+  tmp = ones(K);
+  tmp(~eye(K)) = stat{ip}.prob;
+  pvals(:,:,ip) = tmp;
+  
+  if dotaskglm
+    tmp = permute(squeeze(FO_residual(:,:,1,:,ip)), [3,1,2]);
+    dat1.trial(:,1,:) = tmp(:, ~eye(K));
+    
+    tmp = permute(squeeze(FO_residual(:,:,2,:,ip)), [3,1,2]);
+    dat2.trial(:,1,:) = tmp(:, ~eye(K));
+    
+    stat_res{ip} = ft_timelockstatistics(cfg, dat1, dat2);
+    tmp = ones(K);
+    tmp(~eye(K)) = stat_res{ip}.prob;
+    pvals_residual(:,:,ip) = tmp;
   end
 end
+if length(stat)==1
+  stat = stat{1};
+end
+if length(stat_res)==1
+  stat_res = stat_res{1};
 end
