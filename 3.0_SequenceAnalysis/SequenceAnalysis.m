@@ -184,16 +184,17 @@ save_figure(fig, [config.figdir '0_HMM_summary_statistics'])
 
 %% and actually compute long term assymetry:
 
-[FO,pvals,t_intervals] = computeLongTermAsymmetry(vpath,hmmT,K);
+[FO,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
 
-bonf_ncomparisons = K.^2-K;
+bonf_ncomparisons = 2*(K.^2-K);
 
 mean_direction = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4));
 mean_assym = squeeze(mean((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3),4));
 
 hmm_1stlevel.FO_intervals = FO;
 hmm_1stlevel.FO_assym = squeeze((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3));
-
+hmm_1stlevel.FO_stat = FO_stat;
+hmm_1stlevel.FO_pvals = FO_pvals;
 %% Find the optimial ordering
 % this script determines the optimal state ordering for a circular plot; it
 % then determines whether such a sequentially organised network could arise
@@ -231,6 +232,85 @@ hmm_1stlevel.TIDA = nanmean(reshape(abs(hmm_1stlevel.FO_assym), K*K,[]))';
 for k=1:K
   hmm_1stlevel.TIDA_perstate(:,k) = nanmean(abs([squeeze(hmm_1stlevel.FO_assym(:,k,:));squeeze(hmm_1stlevel.FO_assym(k,:,:))]));
 end
+
+% Run TINDA on the vpath simulated from the transprob matrix.
+n_sim_perm = 100;
+simulation=cell(n_sim_perm,1);
+for iperm=1:n_sim_perm
+  iperm
+  for k=1:length(vpath)
+    simulation_vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
+  end
+  [simulation{iperm}.FO,simulation{iperm}.pvals,simulation{iperm}.t_intervals] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
+  simulation{iperm}.mean_direction = squeeze(mean(simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:),4));
+  simulation{iperm}.mean_assym = squeeze(nanmean((simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:))./mean(simulation{iperm}.FO,3),4));
+  simulation{iperm}.FO_assym = squeeze((simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:))./mean(simulation{iperm}.FO,3));
+  simulation{iperm}.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation{iperm}.FO_assym))));
+  simulation{iperm}.TIDA = nanmean(abs(reshape((simulation{iperm}.FO_assym), K*K,[])))';
+  for k=1:K
+    simulation{iperm}.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation{iperm}.FO_assym(:,k,:));squeeze(simulation{iperm}.FO_assym(k,:,:))]));
+  end
+  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO);
+end
+hmm_1stlevel.FO_stats_simulation = simulation;
+
+% potentially average over simulations before calculating all these
+% measures
+simulation_average=[];
+for k=1:n_sim_perm
+  simulation_average.FO(:,:,:,:,k) = simulation{k}.FO;
+end
+simulation_average.FO = mean(simulation_average.FO,5); 
+[simulation_average.FO_pvals, simulation_average.FO_stat] = FO_permutation_test(simulation_average.FO, K, config.nSj);
+simulation_average.mean_direction = squeeze(mean(simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:),4));
+simulation_average.mean_assym = squeeze(nanmean((simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:))./mean(simulation_average.FO,3),4));
+simulation_average.FO_assym = squeeze((simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:))./mean(simulation_average.FO,3));
+simulation_average.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation_average.FO_assym))));
+simulation_average.TIDA = nanmean(abs(reshape((simulation_average.FO_assym), K*K,[])))';
+for k=1:K
+  simulation_average.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation_average.FO_assym(:,k,:));squeeze(simulation_average.FO_assym(k,:,:))]));
+end
+simulation_average.bestsequencemetrics = optimiseSequentialPattern(simulation_average.FO);
+hmm_1stlevel.FO_stats_simulation_average = simulation_average;
+
+% Alternatively, do the FO assym on the group level
+[FO_group,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{squash(cat(1,hmmT{:}))},K);
+hmm_1stlevel.group_FO = FO_group;
+% we can either simulate the vpath based on the group level transprob, or
+% the individual vpath
+% let do the group:
+nsim=1000;
+for sim=1:nsim
+  sim
+  clear hmmT_sim vpath_sim
+if 1
+  hmmT_sim = cat(1,hmmT{:});
+  vpath_sim = simulateVpath(cat(1,vpath{:}),hmmT_sim,K);
+else
+  hmmT_sim = hmmT;
+  for k=1:length(vpath)
+    vpath_sim{k} = simulateVpath(vpath{k},hmmT_sim{k},K);
+  end
+  vpath_sim = cat(1,vpath_sim{:});
+  hmmT_sim = cat(1,hmmT_sim{:});
+end
+[FO_group_sim{sim}, ~, ~] = computeLongTermAsymmetry({vpath_sim},{hmmT_sim},K);
+end
+FO_group_sim = cat(4,FO_all_sim{:});
+hmm_1stlevel.group_FO_simulation = FO_group_sim;
+
+hmm_1stlevel.FO_group_stats = [];
+hmm_1stlevel.FO_group_stats.FO_group_asym=FO_group(:,:,1)-FO_group(:,:,2);
+hmm_1stlevel.FO_group_stats.FO_group_asym_perm = squeeze(FO_group_sim(:,:,1,:)-FO_group_sim(:,:,2,:));
+% find whether there is a difference with the simulation
+pval_group = [];
+for k=1:12
+  for l=1:12
+    hmm_1stlevel.FO_group_stats.pval_group_vs_sim(k,l) = 1-sum(FO_all_asym(k,l)>squeeze(FO_all_asym_perm(k,l,:)))/nsim;
+  end
+end
+
+
 
 
 %% load wavelet PSDs for each state:
@@ -421,12 +501,12 @@ if whichstudy==1
   ax(1) = axes('Position', [.1 .55 .25 .4]); hold on
   
   tlength=720;
-  if (whichstate==1 && strcmp(config.reordering_states, 'coherence')) || (whichstate==11 && strcmp(config.reordering_states, 'coherence'))
+  if (whichstate==1 && strcmp(config.reordering_states, 'replay')) || (whichstate==2 && strcmp(config.reordering_states, 'coherence'))
     tstart=34300;
     % this is the interval we'll plot TINDA for
     t1 = 106;
     t2 = 668;
-  elseif (whichstate==2 && strcmp(config.reordering_states, 'replay')) || (whichstate==12 && strcmp(config.reordering_states, 'coherence'))
+  elseif (whichstate==2 && strcmp(config.reordering_states, 'replay')) || (whichstate==1 && strcmp(config.reordering_states, 'coherence'))
     tstart=30300;
     t1 = 76;
     t2 = 697;
@@ -441,6 +521,15 @@ if whichstudy==1
   mn = min(min(D(1:8,t_segment)));
   mx = max(max(D(1:8,t_segment)));
   
+%   plot_Gamma(Gamma_subj(t_segment,:), t_segment, true,false,[]), colororder(cat(1,color_scheme{:}))  
+%   a = gca;
+%   for k=1:length(a.Children)
+%     a.Children(k).FaceAlpha=0.2;
+%     a.Children(k).LineWidth=0.001;
+%   end
+%   box off
+%   ylim([.02 .99])
+
   % plot raw trace
   plot((1/250):(1/250):(length(t_segment)/250), D(1:8,t_segment(1:tlength))')
   % annotate visits to whichstate
@@ -453,7 +542,8 @@ if whichstudy==1
   ax(1).YAxis.Label.Color=[0 0 0];
   set(ax(1),'YTick',[]);
   axis off
-  
+  text(ax(1).Position(1)-0.3, ax(1).Position(2)+0.05, {'Resting', 'state', 'data'}, 'Units', 'normalized', 'HorizontalAlignment', 'center', 'FontSize', 10)
+
   %%%%%%%%%%%%%%
   % VPATH PLOT %
   %%%%%%%%%%%%%%
@@ -480,9 +570,16 @@ if whichstudy==1
   set(ax(2),'xcolor','none')
   ax(2).XAxis.Label.Color=[0 0 0];
   ax(2).XAxis.Label.Visible='on';
-  xlabel('Time (sec)');
+  xlabel('Time');
   ax(2).YAxis.Label.Color=[0 0 0];
   ylim(yl)
+  title('HMM state timecourse', 'HorizontalAlignment', 'center')
+%   title('FO', 'HorizontalAlignment', 'center')
+%   title('\boldmath$FO^T$', 'Interpreter', 'Latex', 'FontSize', 10)
+
+  text(0.28, -.06, sprintf('%s', sym("T_1")), 'Units', 'normalized', 'HorizontalAlignment', 'center', 'FontSize', 10, 'FontWeight', 'bold')
+  text(0.72, -.06, sprintf('%s', sym("T_2")), 'Units', 'normalized', 'HorizontalAlignment', 'center', 'FontSize', 10, 'FontWeight', 'bold')
+
   
   %%%%%%%%%%%%%%%%
   % T1 BAR GRAPH %
@@ -499,7 +596,9 @@ if whichstudy==1
   set(gca, 'Ydir', 'reverse')
   axis off
   ylim(yl)
-  
+%   title({'$$\ \ \ \ \ \ \ \forall_{k\neq{1}}\sum_{T_{1}|T_{2}}Z_{t}==k$$'},'Interpreter', 'Latex', 'FontSize', 10, 'HorizontalAlignment', 'center')
+  title('\boldmath$FO^{T_1}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
+
   %%%%%%%%%%%%%%%%
   % T2 BAR GRAPH %
   %%%%%%%%%%%%%%%%
@@ -513,7 +612,8 @@ if whichstudy==1
   set(gca, 'Ydir', 'reverse')
   axis off
   ylim(yl)
-  
+  title('\boldmath$FO^{T_2}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
+
   %%%%%%%%%%%%%%%%%%%%%
   % DISTRIBUTION PLOT %
   %%%%%%%%%%%%%%%%%%%%%
@@ -527,9 +627,13 @@ if whichstudy==1
   cb = [256,193,1; 201, 204, 231]/256;
   for ii=1:12
     axes(ax(4+ii))
+    if ii==1
+%         title({'$$\forall_{k\neq{1}} \sum_{i=1}^{N}Q_{i,T_{1}}-Q_{i,T_{2}}$$'},'Interpreter', 'Latex', 'FontSize', 10, 'HorizontalAlignment', 'center')
+      title('FO asym', 'FontSize', 10)
+    end
     if any(setdiff(1:12, whichstate)==ii)
-      d{1} = squeeze(FO(whichstate,ii,1,:));
-      d{2} = squeeze(FO(whichstate,ii,2,:));
+      d{1} = squeeze(hmm_1stlevel.FO_intervals(whichstate,ii,1,:));
+      d{2} = squeeze(hmm_1stlevel.FO_intervals(whichstate,ii,2,:));
       % exagerate significant differences
       if sigpoints(ii,whichstate)
         if mean_direction(ii,whichstate)<0
@@ -547,20 +651,30 @@ if whichstudy==1
     set(gca, 'YTick', []);
     set(gca, 'XTick', []);
   end
-  
+
   %%%%%%%%%%%%%%%%%%%%%
   % TINDA CIRCLE PLOT %
   %%%%%%%%%%%%%%%%%%%%%
-  ax(17) = axes('Position', [0.70 0.1000 0.3 0.4]);
+  ax(25) = axes('Position', [0.70 0.3500 0.3 0.145]); axis off
+  title('TINDA', 'FontSize', 10)
+  ax(17) = axes('Position', [0.70 0.0500 0.3 0.4]);
   cyclicalstateplot_perstate(bestseq,mean_direction,sigpoints,find(bestseq==whichstate),false);
-  
+% seq=[12:-1:1];
+%   cyclicalstateplot_perstate(seq,mean_direction,sigpoints,find(seq==whichstate),false);
+
+
   %%%%%%%%%%%
   % PSD MAP %
   %%%%%%%%%%%
+
+
   ax(18) = axes('Position',[0.34        0.8 0.175 0.2] ); % top left
   ax(19) = axes('Position',[0.34+0.185  0.8  0.175 0.2] ); % top right
   ax(20) = axes('Position',[0.34+0.025  0.6  0.175 0.2] ); % bottom left
   ax(21) = axes('Position',[0.34+0.16   0.6  0.175 0.2] ); % bottom right
+  ax(26) = axes('Position', [0.37 0.80 0.3 0.15]); axis off
+  title('PSD', 'FontSize', 10)
+
   
   net_mean = zeros(nparcels,size(Gamma,2));
   thresh_mean = zeros(size(Gamma,2),1);
@@ -587,6 +701,8 @@ if whichstudy==1
   ax(22) = axes('Position',[0.63+0.02 0.765 0.24 0.24] ); % left
   ax(23) = axes('Position',[0.63+0.18  0.765 0.24 0.24] ); % right
   ax(24) = axes('Position',[.74 0.6 0.22 0.22]);% bottom
+ 
+  
   if use_WB_nnmf
     graph = abs(squeeze(nnmfWB_res.nnmf_coh_maps(whichstate,1,:,:)));
   else
@@ -596,13 +712,15 @@ if whichstudy==1
   graph_mean = squeeze(nanmean(nanmean(nanmean((coh),3),1),2));
   graph_mean(diagselect)=0;
   [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, graph_mean);
+   ax(27) = axes('Position', [0.7 0.80 0.3 0.15]); axis off
+  title('Coh', 'FontSize', 10, 'HorizontalAlignment', 'center')
   
   
   % change colormap for power
   for ii=18:21
     colormap(ax(ii), 'inferno')
   end
-  
+
   %%%%%%%%%%%%
   % SAVE FIG %
   %%%%%%%%%%%%%
@@ -631,21 +749,28 @@ for k = 1:K
     net_mean(:,k) = log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),3),1))');
   end
 end
+if whichstudy==1
+  statelabels = {'DMN', 'parietal alpha', 'fronto-temporal delta/theta', 'visual alpha', 'temporal theta', 'fronto-parietal', 'sensorimotor beta', 'parietal', 'anterior', 'parieto-temporal', 'sensorimotor', 'visual'};
+end
 
 graph_mean = squeeze(nanmean(nanmean(nanmean((coh),1),2),3));
 graph_mean_triu=squash(triu(graph_mean));
 for whichstate =1:K
-  fig = setup_figure([],2,0.75);
+
+  fig = setup_figure([],2,0.75); axis off
+  suptitle(sprintf('RSN state %d - %s', whichstate, statelabels{whichstate}))
 % TINDA
-  ax(1) = axes('Position', [0.3 0.53, 0.4, 0.4]);
+  ax(11) = axes('Position', [0.35 0.74 0.3 0.145]); axis off
+  title('TINDA', 'FontSize', 10)
+  ax(1) = axes('Position', [0.325 0.5, 0.35, 0.35]);
   cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(alpha/bonf_ncomparisons),find(bestseq==whichstate),false);
-  
+
   ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);cla; hold on
   if use_WB_nnmf
     pow = nnmfWB_res.nnmf_psd_specs(1,1:nearest(f,30));
     f=f(1:nearest(f,30));
   else
-    powAvg = log10(squeeze(nanmean(nanmean(log10(psd(:,:,:,:)),4),2)));
+    powAvg = log10(squeeze(nanmean(nanmean(psd(:,:,:,:),4),2)));
     pow = log10(squeeze(nanmean((psd(:,whichstate,:,:)),4)));
   end
   plot(f,mean(powAvg), '--', 'Color', [.8 .8 .8])
@@ -657,7 +782,7 @@ for whichstate =1:K
   [yl(1) yl(2)] = bounds(log10(squash(squeeze(nanmean(nanmean((psd(:,:,nearest(f,2):end,:)),1),4)))));
   ylim([0.95 1.05].*yl)
   box off
-  
+
   ax(2) = axes('Position',[0    0.25  0.21 0.21]); % top left
   ax(3) = axes('Position',[0.23  0.25  0.21 0.21]); % top right
   ax(4) = axes('Position',[0.03  0.05 0.21 0.21]);% bottom left
@@ -753,44 +878,15 @@ print([config.figdir,'1supp_StatePathways_legend'], '-dpng')
 
 
 %% Figure 2: plot circular diagram
-pvals=ones(12,12); for ik=1:12, for ik2=1:12, [~, pvals(ik,ik2)] = ttest(hmm_1stlevel.FO_assym(ik,ik2,:)); end, end
 if whichstudy~=4
-  sigpoints = pvals<(0.05/bonf_ncomparisons);
+  sigpoints = FO_pvals<(0.05/bonf_ncomparisons);
 else
-  sigpoints = pvals<0.0000001*(0.05/bonf_ncomparisons);
-end
-
-% Run TINDA on the vpath simulated from the transprob matrix.
-simulation=[];
-for k=1:length(vpath)
-  success=0;
-  % sometimes this results in errors related to the simulation, so keep
-  % doing the simulation until it succeeds
-  while success == 0
-    try
-      simulation.vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
-      success = 1;
-    end
-  end
-end
-[simulation.FO,simulation.pvals,simulation.t_intervals] = computeLongTermAsymmetry(simulation.vpath,hmmT,K);
-simulation.mean_direction = squeeze(mean(simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:),4));
-simulation.mean_assym = squeeze(nanmean((simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:))./mean(simulation.FO,3),4));
-simulation.FO_assym = squeeze((simulation.FO(:,:,1,:)-simulation.FO(:,:,2,:))./mean(simulation.FO,3));
-simulation.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation.FO_assym))));
-simulation.TIDA = nanmean(abs(reshape((simulation.FO_assym), K*K,[])))';
-% this is an alternative for TIDA. Taking into account the assymmetry from
-% i to j and j to i.
-% figure; boxplot([nanmean(abs(reshape((simulation.FO_assym - permute(simulation.FO_assym, [2,1,3])), K*K,[])))', nanmean(abs(reshape((hmm_1stlevel.FO_assym - permute(hmm_1stlevel.FO_assym, [2,1,3])), K*K,[])))']);
-for k=1:K
-  simulation.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation.FO_assym(:,k,:));squeeze(simulation.FO_assym(k,:,:))]));
+  sigpoints = FO_pvals<0.0000001*(0.05/bonf_ncomparisons);
 end
 
 
 
-for ext = {'FOasym','rotationalmomentum'}
-
-  
+for ext = {'rotationalmomentum', 'FOasym'}  
 fig = setup_figure([],2,0.5);
 clear ax
 ax(1) = axes('Position', [0.025, 0, .3, 1]);
@@ -799,18 +895,18 @@ text(-.3, 1.3, 'observed')
 
 ax(2) = axes('Position', [0.375, 0, .3, 1]);
 if whichstudy==4
-  cyclicalstateplot(bestseq,simulation.mean_direction, simulation.pvals<0.0000001*(0.05/bonf_ncomparisons),color_scheme,false);
+  cyclicalstateplot(simulation_average.bestsequencemetrics{2},simulation_average.mean_direction, simulation_average.FO_pvals<0.0000001*(0.05/bonf_ncomparisons),color_scheme,false);
 else
-  cyclicalstateplot(bestseq,simulation.mean_direction, simulation.pvals<(0.05/bonf_ncomparisons),color_scheme,false);
+  cyclicalstateplot(simulation_average.bestsequencemetrics{2},simulation_average.mean_direction, simulation_average.FO_pvals<(0.05/bonf_ncomparisons),color_scheme,false);
 end
 text(-.3, 1.3, 'simulated')
 
   if strcmp(ext, 'FOasym')
-    tmp = [simulation.TIDA, hmm_1stlevel.TIDA];
+    tmp = [simulation_average.TIDA, hmm_1stlevel.TIDA];
     ylb = 'Mean FO asymmetry';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
   elseif strcmp(ext, 'rotationalmomentum')
-    tmp = [simulation.rotational_momentum, hmm_1stlevel.rotational_momentum];
+    tmp = [simulation_average.rotational_momentum, hmm_1stlevel.rotational_momentum];
     ylb = 'Rotational momentum';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1));
   end
@@ -827,10 +923,11 @@ box off
 if stat.H
   sigstar({[1,2]}, stat.P)
 end
+title({'Difference between', 'observed data and', 'simulations'})
 set(ax(3), 'XTickLabels', {'simulated', 'observed'})
 ylabel(ylb)
 set_font(10, {'title', 'label'})
-fname = [config.figdir,'2_Cyclicalpattern_', ext{1}];
+fname = [config.figdir,'2_yclicalpattern_', ext{1}];
 save_figure(fname);
 save([fname, 'stat'], 'stat')
 end
@@ -842,10 +939,10 @@ fig = setup_figure([],2,.75);
 for whichstate=1:K+1
   if whichstate==K+1
     fig = setup_figure([],1,.6); hold on;
-    tmp = [simulation.TIDA, hmm_1stlevel.TIDA];
+    tmp = [simulation_average.TIDA, hmm_1stlevel.TIDA];
   else
     subplot(4,3,whichstate), hold on
-    tmp = [simulation.TIDA_perstate(:, whichstate), hmm_1stlevel.TIDA_perstate(:,whichstate)];
+    tmp = [simulation_average.TIDA_perstate(:, whichstate), hmm_1stlevel.TIDA_perstate(:,whichstate)];
   end
   [stat{whichstate}.H, stat{whichstate}.P, stat{whichstate}.CI, stat{whichstate}.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
   clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980]};
@@ -878,7 +975,7 @@ cyclicalstateplot(bestseq,mean_direction, sigpoints,color_scheme);
 save_figure([config.figdir,'2ind_Cyclicalpattern']);
 
 % as well as the simulated
-cyclicalstateplot(bestseq,simulation.mean_direction, simulation.pvals<(0.05/bonf_ncomparisons), color_scheme);
+cyclicalstateplot(simulation_average.bestsequencemetrics{2},simulation_average.mean_direction, simulation_average.FO_pvals<(0.05/bonf_ncomparisons), color_scheme);
 save_figure([config.figdir,'2ind_Cyclicalpattern_simulated']);
 
 
@@ -887,46 +984,42 @@ set_font(10, {'title', 'label'})
 save_figure([config.figdir,'2supp_CyclicalpatternVsPermutations']);
 
 hmm_1stlevel.circularity = circularity;
-hmm_1stlevel.pval = circle_pval;
+hmm_1stlevel.circularity_pval = circle_pval;
 tmp = hmm_1stlevel.FO_assym; tmp(isnan(tmp))=0;
-for k=1:size(tmp,3)
+for k=1:config.nSj
   [hmm_1stlevel.circularity_subject(k,1), hmm_1stlevel.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(bestseq, tmp(:, :,k), sigpoints,[],[],0, color_scheme);
 end
 
-%% Alternatively, do the FO assym on the group level
-[FO_all,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{cat(1,hmmT{:})},K);
-
-% we can either simulate the vpath based on the group level transprob, or
-% the individual vpath
-% let do the group:
-for sim=1:100
-  sim
-  clear hmmT_sim vpath_sim
-if 1
-  hmmT_sim = cat(1,hmmT{:});
-  vpath_sim = simulateVpath(cat(1,vpath{:}),hmmT_sim,K);
-else
-  hmmT_sim = hmmT;
-  for k=1:length(vpath)
-    vpath_sim{k} = simulateVpath(vpath{k},hmmT_sim{k},K);
-  end
-  vpath_sim = cat(1,vpath_sim{:});
-  hmmT_sim = cat(1,hmmT_sim{:});
-end
-[FO_all_sim{sim}, ~, ~] = computeLongTermAsymmetry({vpath_sim},{hmmT_sim},K);
-end
-FO_all_sim = cat(4,FO_all_sim{:});
-
-
-FO_all_asym=FO_all(:,:,1)-FO_all(:,:,2);
-FO_all_asym_perm = squeeze(FO_all_sim(:,:,1,:)-FO_all_sim(:,:,2,:));
-a = [];
-for k=1:12
-  for l=1:12
-    a(k,l) = sum(FO_all_asym(k,l)>squeeze(FO_all_asym_perm(k,l,:)));
-  end
+% also for the simulation average
+[circularity_sim, circle_pval_sim, ~, ~, fig] = geometric_circularity(simulation_average.bestsequencemetrics{2}, simulation_average.mean_direction, simulation_average.FO_pvals<(0.05/bonf_ncomparisons));
+hmm_1stlevel.FO_stats_simulation_average.circularity = circularity_sim;
+hmm_1stlevel.FO_stats_simulation_average.circularity_pval = circle_pval_sim;
+set_font(10, {'title', 'label'})
+save_figure([config.figdir,'2supp_CyclicalpatternVsPermutations_simulation']);
+tmp = simulation_average.FO_assym; tmp(isnan(tmp))=0;
+for k=1:config.nSj
+  [hmm_1stlevel.FO_stats_simulation_average.circularity_subject(k,1), hmm_1stlevel.FO_stats_simulation_average.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(simulation_average.bestsequencemetrics{2}, tmp(:,:,k), simulation_average.FO_pvals<(0.05/bonf_ncomparisons),[],[],0, color_scheme);
 end
 
+% compare the observed circularity with the simulated one
+dat1=[];
+dat1.dimord = 'rpt_chan_time';
+dat1.label{1} = 'circularity';
+dat1.time=1;
+dat2=dat1;
+dat1.trial =  hmm_1stlevel.circularity_subject;
+dat2.trial = hmm_1stlevel.FO_stats_simulation_average.circularity_subject;
+
+cfg=[];
+cfg.method = 'montecarlo';
+cfg.statistic = 'depsamplesT';
+cfg.design = [ones(1,config.nSj), 2*ones(1,config.nSj); 1:config.nSj, 1:config.nSj];
+cfg.ivar = 1;
+cfg.uvar = 2;
+cfg.numrandomization = 100000;
+cfg.tail = 1;
+stat_c = ft_timelockstatistics(cfg, dat1, dat2);
+hmm_1stlevel.FO_stats_simulation_average.circularity_stat_obs_vs_perm = stat_c;
 
 %% Figure 2 supplement:  analyse by quartiles
 percentiles = 0:20:100;
