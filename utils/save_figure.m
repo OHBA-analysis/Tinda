@@ -16,6 +16,7 @@ print(path,'-depsc')
 print(path,'-dpng')
 if highres
   set(fig, 'Position', [1 1 2 2].*fig.Position)
+  set_font(14);
   print([path '_highres'],'-depsc');
   print([path '_highres'],'-dpng');
 end
