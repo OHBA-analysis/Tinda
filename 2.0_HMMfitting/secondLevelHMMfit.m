@@ -52,7 +52,7 @@ elseif whichstudy==4
 elseif whichstudy==5
   temp1 = load(config.storymfilelist);
   temp2 = load(config.wrkmemfilelist);
-  mat_files_orth = [temp1.mat_files_orth,temp2.mat_files_orth];
+  mat_files_orth = [temp1.mat_files_orth; temp2.mat_files_orth];
   % create a matrix from where we can select specific subjects
   for k=1:length(mat_files_orth)
     tmp = extractBetween(mat_files_orth{k}, '_matfiles/', '_MEG');
@@ -183,7 +183,7 @@ for iSj=1:config.nSj
     T = T_poiss;
     
     if exist(mat_files_poiss{iSj})
-      error('careful - about to overwrite files containing STC info!')
+      %error('careful - about to overwrite files containing STC info!')
     end
     save(mat_files_poiss{iSj},'X','T');
   end
@@ -378,9 +378,12 @@ else
     options.Pstructure(options.K,1) = 1;
     options.useParallel = false;
     options.standardise = false;
-    load([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
-    
-  end
+    if whichstudy==5
+      load([replace(config.figdir, 'Study5', 'Study3'),'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+    else
+      load([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+    end
+    end
   % and infer each subject's associated state timecourse:
   options.updateObs = 0;
   options.decodeGamma = 1;
