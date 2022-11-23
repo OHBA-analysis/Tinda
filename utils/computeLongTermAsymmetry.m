@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm)
+function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm, replayidx)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -29,15 +29,42 @@ for iSj=1:nSj
   end
   T_breaks = cumsum(T{iSj}); % indices of HMM chain breaks to be excluded
   if dotaskglm
-    % get the demeaned vpath data to use in the GLM later
-    v=zeros(length(vpath{iSj}), K);
-    for ik=1:K
-      v(:,ik) = vpath{iSj}==ik;
+    if exist('replayidx') && ~isempty(replayidx)
+      v=zeros(length(vpath{iSj}), K);
+      for ik=1:K
+        v(:,ik) = vpath{iSj}==ik;
+      end
+      v_mean = zeros(251, length(replayidx),K);
+      rem=[];
+      for k=1:length(replayidx)
+        ix = replayidx(k);
+        try
+          v_mean(:, k,:) = v(ix-125:ix+125,:);
+        catch
+          rem = [rem, k];
+        end
+      end
+      v_mean(:, rem,:) = [];
+      v_mean = squeeze(mean(v_mean,2));
+      replayidx(rem)=[];
+      v_demean = v;
+      for k=1:length(replayidx)
+        ix = replayidx(k);
+        v_demean(ix-125:ix+125,:) = v(ix-125:ix+125,:)-v_mean;
+      end
+      
+      
+    else
+      % get the demeaned vpath data to use in the GLM later
+      v=zeros(length(vpath{iSj}), K);
+      for ik=1:K
+        v(:,ik) = vpath{iSj}==ik;
+      end
+      % reshape v to get trials
+      v=reshape(v,[], length(T{iSj}), K);
+      v_demean = demean(v, 2);
+      v_demean = reshape(v_demean, [], K);
     end
-    % reshape v to get trials
-    v=reshape(v,[], length(T{iSj}), K);
-    v_demean = demean(v, 2);
-    v_demean = reshape(v_demean, [], K);
   end
   for ik=1:K
     intervalDesign = zeros(length(vpath{iSj}),1);
@@ -119,56 +146,29 @@ end
 
 % Do Permutation test on FO (instead of t-test)
 
-dat1=[];
-dat1.dimord = 'rpt_chan_time';
-dat1.label{1} = 'FO asym';
-dat1.time=1:(K^2-K);
-dat2=dat1;
-cfg=[];
-cfg.method = 'montecarlo';
-cfg.statistic = 'depsamplesT';
-cfg.design = [ones(1,nSj), 2*ones(1,nSj); 1:nSj, 1:nSj];
-cfg.ivar = 1;
-cfg.uvar = 2;
-cfg.numrandomization = 100000;
-
 pvals = zeros(K,K,length(intervalpercentiles)-1);
+stat=[];
 if dotaskglm
   pvals_residual = zeros(K,K,length(intervalpercentiles)-1);
 else
-  pvals_residual=[]; stat_res=[]; 
+  pvals_residual=[]; stat_res=[];
 end
-
-for ip=1:length(intervalpercentiles)-1
-  % do permutation test of FO
-  
-  tmp = permute(squeeze(FO(:,:,1,:,ip)), [3,1,2]);
-  dat1.trial(:,1,:) = tmp(:, ~eye(K));
-  
-  tmp = permute(squeeze(FO(:,:,2,:,ip)), [3,1,2]);
-  dat2.trial(:,1,:) = tmp(:, ~eye(K));
-  
-  stat{ip} = ft_timelockstatistics(cfg, dat1, dat2);
-  tmp = ones(K);
-  tmp(~eye(K)) = stat{ip}.prob;
-  pvals(:,:,ip) = tmp;
-  
-  if dotaskglm
-    tmp = permute(squeeze(FO_residual(:,:,1,:,ip)), [3,1,2]);
-    dat1.trial(:,1,:) = tmp(:, ~eye(K));
+if nSj>1
+  for ip=1:length(intervalpercentiles)-1
+    % do permutation test of FO
     
-    tmp = permute(squeeze(FO_residual(:,:,2,:,ip)), [3,1,2]);
-    dat2.trial(:,1,:) = tmp(:, ~eye(K));
+    [pvals(:,:,ip), stat{ip}] = FO_permutation_test(FO(:,:,:,:,ip), K, nSj);
     
-    stat_res{ip} = ft_timelockstatistics(cfg, dat1, dat2);
-    tmp = ones(K);
-    tmp(~eye(K)) = stat_res{ip}.prob;
-    pvals_residual(:,:,ip) = tmp;
+    if dotaskglm
+      [pvals_residual(:,:,ip), stat_res{ip}] = FO_permutation_test(FO_residual(:,:,:,:,ip), K, nSj);
+    end
   end
-end
-if length(stat)==1
-  stat = stat{1};
-end
-if length(stat_res)==1
-  stat_res = stat_res{1};
+  if length(stat)==1
+    stat = stat{1};
+  end
+  if length(stat_res)==1
+    stat_res = stat_res{1};
+  end
+else
+  warning('The FO asymmetry cannot not be statistically tested because there is only one subject')
 end
