@@ -254,7 +254,7 @@ colorweights = colorweights./(max(colorweights(:)+0.1));
 % make plots:
 fig = figure('Position',[38 476 1366 322]);
 CM = colormap(fig,hot(100));
-optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
+optimalseqfile = [config.hmmfolder,'bestseq',replace(int2str(whichstudy), '5', '3'),'.mat'];
 load(optimalseqfile);
 bestseq = bestsequencemetrics{2};
 
