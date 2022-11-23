@@ -36,7 +36,7 @@ for whichtopo = 1:3
       fig = setup_figure([],2,1);
       ax(13,1) = axes('Position', [0.295 0.19 0.38 .6]); hold on
       axes(ax(13,1))
-      cyclicalstateplot(bestseq,mean_direction, zeros(12), color_scheme, false,[],true)
+      cyclicalstateplot(bestseq,mean_direction, zeros(12), color_scheme, false)
       
       for k=1:12
         ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
@@ -143,14 +143,14 @@ for whichtopo = 1:3
           [~, ax(k,3), ~] = plot_coh_topo(ax(k,3), mni_coords, graph, cohAvg_topo, [0 3], [], 95);  axis off      
         elseif strcmp(do_pow_or_coh, 'pow')
           ax(k,1) = axes('Position', [0 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
-          plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
+%           plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
         elseif  strcmp(do_pow_or_coh, 'coh')
           ax(k,1) = axes('Position', [0.01 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.08 0.08]);
           [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], 95);axis off
         end
         colormap(hotcold)
       end
-      ax(11,1) = axes('Position', [0.375, 0.38, 0.25, 0.25]); hold on
+      ax(11,1) = axes('Position', [0.365, 0.38, 0.25, 0.25]); hold on
       clear l
       for k=1:K
         scatter(log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),4),3))), log10(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
