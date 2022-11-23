@@ -145,61 +145,24 @@ hmm_1stlevel.LT_std = LTstd;
 hmm_1stlevel.IT_mu = ITmerged;
 hmm_1stlevel.IT_med = ITmedian;
 hmm_1stlevel.IT_std = ITstd;
-%%
-% summary plots:
-fig = setup_figure([],1,2.25);
-subplot(3,1,1)
-distributionPlot(FracOcc,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}});
-set(gca,'YLim',[0 1.1*max(FracOcc(:))]);
-xlabel('RSN-state'), ylabel('Proportion'), title('Fractional Occupancy')
-grid on;
 
-subplot(3,1,2)
-distributionPlot(LTmerged ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
-title('Life Times'); xlabel('RSN-state'), ylabel('Time (ms)'),
-grid on;
-YL = 1.1*max(LTmerged(:))./ config.sample_rate * 1000;
-set(gca,'YLim',[0 YL]);
+%% plot HMM summary statistics
+figure_supp_hmm_stats
 
-subplot(3,1,3);
-% NOTE: if we want to use a logscale in the axis, enable this
-%{
-distributionPlot(log10(ITmerged ./ config.sample_rate * 1000),'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
-title('Interval Times');xlabel('RSN-state'), ylabel('Time (ms)');
-grid on
-YL(2) =1.5* max(mean(log10(ITmerged ./ config.sample_rate * 1000)));
-YL(1) = min(squash(log10(ITmerged ./ config.sample_rate * 1000)));
-set(gca,'YLim',YL)
-set(gca,'YTick',(log10(1000*[0.05,0.1,0.5,1,5,10])))
-y_labels = get(gca,'YTickLabel');
-for i=1:length(y_labels)
-  y_labels{i}=num2str(10.^(str2num(y_labels{i})),1);
-end
-set(gca,'YTickLabels',y_labels);
-%}
-% print([config.figdir '0_temporalstats_IT_logscale'],'-depsc')
+%% Compute long term assymetry:
 
-distributionPlot(ITmerged ./ config.sample_rate*1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
-title('Interval Times');xlabel('RSN-state'), ylabel('Time (ms)');grid on
-YL(2) =1.5* max(mean((ITmerged ./ config.sample_rate * 1000)));
-YL(1) = 0;
-set(gca,'YLim',YL)
-
-save_figure(fig, [config.figdir '0_HMM_summary_statistics'])
-
-%% and actually compute long term assymetry:
-
-[FO,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
+[FO_intervals,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
 
 bonf_ncomparisons = 2*(K.^2-K);
 
-mean_direction = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4));
-mean_assym = squeeze(mean((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3),4));
+mean_direction = squeeze(mean(FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:),4));
+mean_assym = squeeze(mean((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:))./mean(FO_intervals,3),4));
 
-hmm_1stlevel.FO_intervals = FO;
-hmm_1stlevel.FO_assym = squeeze((FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3));
+hmm_1stlevel.FO_intervals = FO_intervals;
+hmm_1stlevel.FO_assym = squeeze((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:))./mean(FO_intervals,3));
 hmm_1stlevel.FO_stat = FO_stat;
 hmm_1stlevel.FO_pvals = FO_pvals;
+
 %% Find the optimial ordering
 % this script determines the optimal state ordering for a circular plot; it
 % then determines whether such a sequentially organised network could arise
@@ -210,7 +173,7 @@ else
   optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
 end
 if ~isfile(optimalseqfile)
-  bestsequencemetrics = optimiseSequentialPattern(FO);
+  bestsequencemetrics = optimiseSequentialPattern(FO_intervals);
   save(optimalseqfile,'bestsequencemetrics');
 else
   load(optimalseqfile);
@@ -247,16 +210,16 @@ for iperm=1:n_sim_perm
   for k=1:length(vpath)
     simulation_vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
   end
-  [simulation{iperm}.FO,simulation{iperm}.pvals,simulation{iperm}.t_intervals] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
-  simulation{iperm}.mean_direction = squeeze(mean(simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:),4));
-  simulation{iperm}.mean_assym = squeeze(nanmean((simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:))./mean(simulation{iperm}.FO,3),4));
-  simulation{iperm}.FO_assym = squeeze((simulation{iperm}.FO(:,:,1,:)-simulation{iperm}.FO(:,:,2,:))./mean(simulation{iperm}.FO,3));
+  [simulation{iperm}.FO_intervals,simulation{iperm}.pvals,simulation{iperm}.t_intervals] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
+  simulation{iperm}.mean_direction = squeeze(mean(simulation{iperm}.FO_intervals(:,:,1,:)-simulation{iperm}.FO_intervals(:,:,2,:),4));
+  simulation{iperm}.mean_assym = squeeze(nanmean((simulation{iperm}.FO_intervals(:,:,1,:)-simulation{iperm}.FO_intervals(:,:,2,:))./mean(simulation{iperm}.FO_intervals,3),4));
+  simulation{iperm}.FO_assym = squeeze((simulation{iperm}.FO_intervals(:,:,1,:)-simulation{iperm}.FO_intervals(:,:,2,:))./mean(simulation{iperm}.FO_intervals,3));
   simulation{iperm}.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation{iperm}.FO_assym))));
   simulation{iperm}.TIDA = nanmean(abs(reshape((simulation{iperm}.FO_assym), K*K,[])))';
   for k=1:K
     simulation{iperm}.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation{iperm}.FO_assym(:,k,:));squeeze(simulation{iperm}.FO_assym(k,:,:))]));
   end
-  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO);
+  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
 end
 hmm_1stlevel.FO_stats_simulation = simulation;
 
@@ -264,19 +227,19 @@ hmm_1stlevel.FO_stats_simulation = simulation;
 % measures
 simulation_average=[];
 for k=1:n_sim_perm
-  simulation_average.FO(:,:,:,:,k) = simulation{k}.FO;
+  simulation_average.FO_intervals(:,:,:,:,k) = simulation{k}.FO_intervals;
 end
-simulation_average.FO = mean(simulation_average.FO,5);
-[simulation_average.FO_pvals, simulation_average.FO_stat] = FO_permutation_test(simulation_average.FO, K, config.nSj);
-simulation_average.mean_direction = squeeze(mean(simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:),4));
-simulation_average.mean_assym = squeeze(nanmean((simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:))./mean(simulation_average.FO,3),4));
-simulation_average.FO_assym = squeeze((simulation_average.FO(:,:,1,:)-simulation_average.FO(:,:,2,:))./mean(simulation_average.FO,3));
+simulation_average.FO_intervals = mean(simulation_average.FO_intervals,5);
+[simulation_average.FO_pvals, simulation_average.FO_stat] = FO_permutation_test(simulation_average.FO_intervals, K, config.nSj);
+simulation_average.mean_direction = squeeze(mean(simulation_average.FO_intervals(:,:,1,:)-simulation_average.FO_intervals(:,:,2,:),4));
+simulation_average.mean_assym = squeeze(nanmean((simulation_average.FO_intervals(:,:,1,:)-simulation_average.FO_intervals(:,:,2,:))./mean(simulation_average.FO_intervals,3),4));
+simulation_average.FO_assym = squeeze((simulation_average.FO_intervals(:,:,1,:)-simulation_average.FO_intervals(:,:,2,:))./mean(simulation_average.FO_intervals,3));
 simulation_average.rotational_momentum = squeeze(imag(sum(sum(angleplot.*simulation_average.FO_assym))));
 simulation_average.TIDA = nanmean(abs(reshape((simulation_average.FO_assym), K*K,[])))';
 for k=1:K
   simulation_average.TIDA_perstate(:,k) = nanmean(abs([squeeze(simulation_average.FO_assym(:,k,:));squeeze(simulation_average.FO_assym(k,:,:))]));
 end
-simulation_average.bestsequencemetrics = optimiseSequentialPattern(simulation_average.FO);
+simulation_average.bestsequencemetrics = optimiseSequentialPattern(simulation_average.FO_intervals);
 hmm_1stlevel.FO_stats_simulation_average = simulation_average;
 
 % Alternatively, do the FO assym on the group level
@@ -402,63 +365,11 @@ cohAvg_topo = squeeze(nanmean(sum(nanmean(static_coh,3),2),1));
 
 
 %% plot average state spectra vs freq (averaged over all parcels):
-
-Pmean = squeeze(mean(mean(psd,1),4));
-
-% relorabs = 'rel'; % 'rel' or 'abs'
-for relorabs = {'abs', 'rel'}
-  fig = setup_figure([],1,1);
-  if strcmp(relorabs, 'abs')
-    sup = '';
-  elseif strcmp(relorabs, 'rel')
-    sup = '_relative';
-  end
-  ls = {'-','--'};
-  for i=1:hmm.K
-    if strcmp(relorabs, 'rel')
-      plot(sqrtf,Pmean(i,:),'Color',color_scheme{i},'LineStyle',ls{1+(i>6)},'LineWidth',2);
-      set_sqrt_ax(f)
-      xlim(sqrt([f(1), 30]))
-    else
-      plot(f,Pmean(i,:),'Color',color_scheme{i},'LineStyle',ls{1+(i>6)},'LineWidth',2);
-      xlim([f(1), 30])
-    end
-    hold on;
-    leglabels{i} = ['State ',int2str(i)];
-  end
-  
-  xlabel('Freq (Hz)'), ylabel('PSD');
-  yticks([])
-  legend(leglabels, 'Location', 'NorthOutside', 'NumColumns', K/4)
-  set_font(10, {'title', 'label'})
-  save_figure([config.figdir,'1supp_PSDperstate', sup]);
-end
-
-%% Make a power vs coherence plot
-
-fig = setup_figure([],1,.75); hold on
-for k=1:K
-  scatter((squeeze(log10(nanmean(nanmean((psd(:,k,:,:)),4),3)))), log10(squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
-  l{k} = sprintf('State %d', k);
-end
-% axis off
-box off
-yticks([])
-ylabel('Coherence')
-xticks([])
-xlabel('PSD')
-legend(l, 'Location', 'EastOutside', 'NumColumns', 1)
-box off
-axis square
-set_font(10, {'label', 'title'})
-xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
-ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
-
-save_figure([config.figdir,'1supp_PSDvsCoh'] )
+figure_supp_hmm_spectra
 
 
 %% create the TINDA example figure in a seperate script
-figure1
+figure1_tinda_example
 
 
 %% Figure 1 Supplement: Plot each figure separately with power and coherence maps
@@ -546,63 +457,3 @@ figure3_spectral_circle
 
 outname = [config.figdir, 'TINDA.avi'];
 tinda_movie(bestseq, mean_direction, sigpoints, f, psd, coh, outname)
-
-
-
-
-%% refit earlier spatial modes to camcan data:
-
-if whichstudy==4
-  MEGUKfolder = '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/CanonicalRS/250Hz/hmm_1to45hz/'
-  nnmffile_MEGUK = [MEGUKfolder,'nnmf_spatialfit.mat'];
-  load(nnmffile_MEGUK)
-  
-  opt = statset('maxiter',1);
-  [b_new,a_new]=nnmf_mww(P2',maxP,'replicates',500,'algorithm','als','w0',b','options',opt);
-  b_new = b_new';
-  a_new = a_new';
-  a_new = reshape(a_new,[12,size(P2,1)/12,maxP]);
-  
-  figure();
-  bestorder = [1:6];
-  plotCyclicalTimeFreqPattern(seq,config.parc,a_new(:,:,bestorder),b_new(bestorder,:),f, config)
-  print([config.figdir,'2CPSD_modes_samefit'],'-dpng');
-  
-end
-
-
-
-%% Circular Vpath analysis
-%{
-W=125;
-W_half = (W-1)/2;
-for i=1:length(vpath)
-  vpathcircle{i}= getCircleVpath(vpath{i}, bestseq);
-  tmp = zeros((W-1)/2,1);
-  vpathcircle_window{i} = tmp;
-  for k=W_half+1:length(vpathcircle{i})-W_half
-    vpathcircle_window{i} = [vpathcircle_window{i}; mean(vpathcircle{i}(k-W_half:k+W_half))];
-  end
-  vpathcircle_window{i} = [vpathcircle_window{i}; tmp];
-  
-  
-  % do Fourier analysis on the circle vpath
-  [tmp, circlefreq, circletime] = fourieranalysis_circleVpath(vpathcircle{i}, []);
-  circlepow(i,:,:) = squeeze(nanmean(abs(tmp).^2));
-  circlespctrm(i,:,:) = squeeze(nanmean(tmp));
-  
-  [tmp, circlefreq, circletime] = fourieranalysis_circleVpath(vpathcircle_window{i}, []);
-  circlepow_window(i,:,:) = squeeze(nanmean(abs(tmp).^2));
-  circlespctrm_window(i,:,:) = squeeze(nanmean(tmp));
-end
-
-figure; plot(circlefreq, nanmean(circlepow,3)), hold on, plot(circlefreq, nanmean(nanmean(circlepow,3)), 'k', 'LineWidth', 2)
-title('Circle vpath PSD per subject, CamCan Rest');
-plot4paper('Frequenzy (Hz)', 'PSD');
-print([config.figdir,'1F1_CircleFreq'],'-dpng');
-
-figure; plot(circlefreq, nanmean(circlepow_window,3)), hold on, plot(circlefreq, nanmean(nanmean(circlepow_window,3)), 'k', 'LineWidth', 2)
-title('Windowed circle vpath PSD per subject, CamCan Rest');
-plot4paper('Frequenzy (Hz)', 'PSD');
-print([config.figdir,'1F2_CircleFreq_windowed'],'-dpng');
-%}
