@@ -1,4 +1,4 @@
-function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme,newfigure,plotstate)
+function ax = cyclicalstateplot(ordering,mean_direction,sigpoints,color_scheme,newfigure,plotstate,allowstretch)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -17,6 +17,7 @@ if exist('plotstate', 'var') && length(plotstate)==1
 else
   plotstate=1:K;
 end
+if ~exist('allowstretch', 'var'), allowstretch=0; end
 
 disttoplot_manual = zeros(12,2);
 for i=1:12
@@ -29,6 +30,9 @@ if newfigure
 else
  axes(gca);
 end
+tmpa = gca;
+
+
 for ik1=plotstate
     for k2=1:K
         if sigpoints(ik1,k2)
@@ -53,7 +57,7 @@ for ik1=plotstate
         end
     end
 end
-tmpa = gca;
+
 msize = (0.5+tmpa.Position(3)/2)*400;
 for ik=1:K
   docolor=1;
@@ -65,6 +69,8 @@ for ik=1:K
     scatter1.MarkerFaceAlpha = 1;%.75;
     text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str((ik)),'FontSize',12,'FontWeight','bold', 'FontName', 'Calibri', 'HorizontalAlignment', 'center');hold on;
 end
-axis square
+if ~allowstretch
+  axis square
+end
 axis off
 end
