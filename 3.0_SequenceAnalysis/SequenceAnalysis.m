@@ -31,7 +31,7 @@ if whichstudy<3
   if strcmp(config.reordering_states, 'replay')
     new_state_ordering = temp.new_state_ordering;
   elseif strcmp(config.reordering_states, 'coherence')
-    load([config.figdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, 'coherence_state_ordering.mat'])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -41,7 +41,7 @@ if whichstudy<3
   end
 elseif whichstudy==3
   if strcmp(config.reordering_states, 'coherence')
-    load([config.figdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, 'coherence_state_ordering.mat'])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -64,7 +64,7 @@ elseif whichstudy==3
   clear hmmTsubj hmmTold;
 elseif whichstudy==4
   if strcmp(config.reordering_states, 'coherence')
-    load([config.figdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, 'coherence_state_ordering.mat'])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -134,7 +134,7 @@ hmm_1stlevel.IT_std = ITstd;
 %% load wavelet PSDs for each state:
 diagselect = find(eye(config.parc.n_parcels));
 offdiagselect = find(~eye(config.parc.n_parcels));
-fname = [config.figdir, 'coherence_state_ordering.mat'];
+fname = [config.resultsdir, 'coherence_state_ordering.mat'];
 
 if whichstudy==3
   % for HCP need to recompute run indices (each subject has multiple runs)
@@ -235,7 +235,7 @@ hmm_1stlevel.group_FO = FO_group;
 % then determines whether such a sequentially organised network could arise
 % by chance by random shuffles of the rows of the transmat
 if strcmp(config.reordering_states, 'coherence')
-  optimalseqfile = [config.figdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
+  optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
 else
   optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
 end
@@ -304,10 +304,10 @@ figure_supp_tinda_respiration
 
 
 %% save metrics
-if exist([config.figdir, 'HMMsummarymetrics'])
-  save([config.figdir, 'HMMsummarymetrics'],'hmm_1stlevel','-append');
+if exist([config.resultsdir, 'HMMsummarymetrics'])
+  save([config.resultsdir, 'HMMsummarymetrics'],'hmm_1stlevel','-append');
 else
-  save([config.figdir, 'HMMsummarymetrics'],'hmm_1stlevel')
+  save([config.resultsdir, 'HMMsummarymetrics'],'hmm_1stlevel')
 end
 
 
@@ -318,5 +318,5 @@ figure3_spectral_circle
 
 %% Figure 3 supplement: TINDA Movie
 
-outname = [config.figdir, 'TINDA.avi'];
+outname = [config.resultsdir, 'TINDA.avi'];
 tinda_movie(bestseq, mean_direction, sigpoints, f, psd, coh, outname)

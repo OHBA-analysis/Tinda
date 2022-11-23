@@ -4,10 +4,10 @@ fig = setup_figure([],2,.75);
 for whichstate=1:K+1
   if whichstate==K+1
     fig = setup_figure([],1,.6); hold on;
-    tmp = [simulation_average.TIDA, hmm_1stlevel.TIDA];
+    tmp = [simulation_average.TIDA, hmm_1stlevel.cycle_metrics.TIDA];
   else
     subplot(4,3,whichstate), hold on
-    tmp = [simulation_average.TIDA_perstate(:, whichstate), hmm_1stlevel.TIDA_perstate(:,whichstate)];
+    tmp = [simulation_average.TIDA_perstate(:, whichstate), hmm_1stlevel.cycle_metrics.TIDA_perstate(:,whichstate)];
   end
   [stat{whichstate}.H, stat{whichstate}.P, stat{whichstate}.CI, stat{whichstate}.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
   clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980]};
@@ -23,13 +23,12 @@ for whichstate=1:K+1
   set(gca, 'XTickLabels', {'simulated', 'observed'})
   ylabel({'Mean FO asym'})
   if whichstate==K
-    fname=[config.figdir,'2supp_TIDA_perstate'];
+    fname=[config.figdir, 'figure_supp_tinda_metrics/','2supp_TIDA_perstate'];
     save_figure(fname);
-    save([fname, 'stat'], 'stat')
   elseif whichstate==K+1
-    fname=[config.figdir,'2supp_TIDA'];
+    fname=[config.figdir, 'figure_supp_tinda_metrics/','2supp_TIDA'];
     save_figure(fname);
-    stat=stat{K+1};
-    save([fname, 'stat'], 'stat')
   end
 end
+
+%% TODO: make figures for all perstate and per subject measures. Also for simulations

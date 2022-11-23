@@ -6,8 +6,10 @@ config = [];
 if isfolder('/Volumes/T5_OHBA/')
   config.figdir = ['/Volumes/T5_OHBA/Projects/Tinda/Study',int2str(whichstudy),'/'];
 else
-  config.figdir = ['/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study',int2str(whichstudy),'/'];
+  config.figdir = ['/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study',int2str(whichstudy),'/figures/'];
 end
+  config.resultsdir = ['/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study',int2str(whichstudy),'/'];
+
 
 if whichstudy==1
   % this is the model run on Higgins2020_Neuron (ie on the MEG UK
@@ -18,7 +20,7 @@ if whichstudy==1
   config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
   config.sample_rate = 250;
   config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
-  config.metricfile = [config.figdir,'HMMsummarymetrics.mat'];
+  config.metricfile = [config.resultsdir, 'HMMsummarymetrics.mat'];
   config.reordering_states = 'coherence'; % can be 'replay' (originally)
 elseif whichstudy==2
   % this is the model run on the same MEGUK partnership data with a 4Hz

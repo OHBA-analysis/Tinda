@@ -237,6 +237,6 @@ if whichstudy==1
   % SAVE FIG %
   %%%%%%%%%%%%%
   set_font(10, {'label', 'title'})
-  save_figure(fig, [config.figdir '/1_tinda_example_state',int2str(whichstate)]);
+  save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_example_state',int2str(whichstate)]);
   %   close
 end

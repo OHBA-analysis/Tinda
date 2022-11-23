@@ -38,4 +38,4 @@ YL(2) =1.5* max(mean((ITmerged ./ config.sample_rate * 1000)));
 YL(1) = 0;
 set(gca,'YLim',YL)
 
-save_figure(fig, [config.figdir '0_HMM_summary_statistics'])
+save_figure(fig, [config.figdir, 'figure_supp_hmm_stats/', '0_HMM_summary_statistics'])

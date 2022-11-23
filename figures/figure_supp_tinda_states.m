@@ -85,7 +85,7 @@ for whichstate =1:K
     colormap(ax(ii), cmap)
   end
   set_font(10, {'title', 'label'})
-  save_figure(fig, [config.figdir '1supp_tinda_state',int2str(whichstate)],false);
+  save_figure(fig, [config.figdir, 'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate)],false);
   
   % also save the one with relative x axis
   axes(ax(9))
@@ -101,7 +101,7 @@ for whichstate =1:K
   shadedErrorBar(sqrtf,mean(C,1), std(C,[],1)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
   set_sqrt_ax(f)
   xlim(sqrtf([1 end]))
-  save_figure(fig, [config.figdir '/1supp_tinda_state',int2str(whichstate), '_relative'],false);
+  save_figure(fig, [config.figdir,  'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate), '_relative'],false);
   
 end
 
@@ -112,11 +112,11 @@ if whichstudy<4
 else
   cyclicalstateplot_perstate(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons),[],false, color_scheme);
 end
-save_figure([config.figdir,'1supp_StatePathways']);
+save_figure([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways']);
 
 % also print for legend:
 figure('Position', [440 579 114 219]);
 quiver(0,0,1,0,'Color',[0 0 0],'LineWidth',2,'MaxHeadSize',0.8);hold on;
 quiver(0,1,1,0,'Color',[0 0 0]+0.8,'LineWidth',2,'MaxHeadSize',0.8);hold on;
 axis off;
-print([config.figdir,'1supp_StatePathways_legend'], '-dpng')
+print([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways_legend'], '-dpng')

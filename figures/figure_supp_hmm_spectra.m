@@ -28,7 +28,7 @@ for relorabs = {'abs', 'rel'}
   yticks([])
   legend(leglabels, 'Location', 'NorthOutside', 'NumColumns', K/4)
   set_font(10, {'title', 'label'})
-  save_figure([config.figdir,'1supp_PSDperstate', sup]);
+  save_figure([config.figdir, 'figure_supp_hmm_spectra/','1supp_PSDperstate', sup]);
 end
 
 %% Make a power vs coherence plot
@@ -51,4 +51,4 @@ set_font(10, {'label', 'title'})
 xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
 ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
 
-save_figure([config.figdir,'1supp_PSDvsCoh'] )
+save_figure([config.figdir, 'figure_supp_hmm_spectra/','1supp_PSDvsCoh'] )

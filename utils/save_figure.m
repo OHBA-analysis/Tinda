@@ -11,7 +11,12 @@ elseif ischar(fig)
 end
 if ~exist('highres', 'var'), highres=true; end
 
-% 
+% create directory if it doesn't exist
+if ~exist(fileparts(path), 'dir')
+  mkdir(fileparts(path))
+end
+
+
 print(path,'-depsc')
 print(path,'-dpng')
 if highres

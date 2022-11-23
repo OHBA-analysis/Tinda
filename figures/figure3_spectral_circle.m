@@ -167,7 +167,7 @@ for whichtopo = 1:3
       xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
       ylim(log10([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
       set_font(10, {'label', 'title'})
-      save_figure([config.figdir,'3_Spectral_circle_', do_pow_or_coh, sup1, sup2], false)
+      save_figure([config.figdir, 'figure3_spectral_circle/','3_Spectral_circle_', do_pow_or_coh, sup1, sup2], false)
     end
   end
 end

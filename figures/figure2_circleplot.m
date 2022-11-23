@@ -6,18 +6,18 @@ for ext = {'rotationalmomentum'}
   clear ax
   ax(1) = axes('Position', [0.025, 0, .3, 1]);
   cyclicalstateplot(bestseq,mean_direction, sigpoints,color_scheme,false);
-  title({'Observed rotational', sprintf('momentum = %0.3f', mean(hmm_1stlevel.rotational_momentum)./hmm_1stlevel.max_theoretical_rotational_momentum), ''})
+  title({'Observed rotational', sprintf('momentum = %0.3f', mean(hmm_1stlevel.cycle_metrics.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
   
   ax(2) = axes('Position', [0.375, 0, .3, 1]);
   cyclicalstateplot(simulation{1}.bestsequencemetrics{2},simulation{1}.mean_direction, simulation{1}.FO_pvals<alpha_thresh,color_scheme,false);
-  title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.max_theoretical_rotational_momentum), ''})
+  title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
   
   if strcmp(ext, 'FOasym') || strcmp(ext{1}, 'FOasym')
-    tmp = [simulation{1}.TIDA, hmm_1stlevel.TIDA];
+    tmp = [simulation{1}.TIDA, hmm_1stlevel.cycle_metrics.TIDA];
     ylb = 'Mean FO asymmetry';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
   elseif strcmp(ext, 'rotationalmomentum') || strcmp(ext{1}, 'rotationalmomentum')
-    tmp = [simulation{1}.rotational_momentum, hmm_1stlevel.rotational_momentum]./hmm_1stlevel.max_theoretical_rotational_momentum;
+    tmp = [simulation{1}.rotational_momentum, hmm_1stlevel.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
     ylb = 'Rotational momentum';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1));
   end
@@ -38,7 +38,7 @@ for ext = {'rotationalmomentum'}
   set(ax(3), 'XTickLabels', {'simulated', 'observed'})
   ylabel(ylb)
   set_font(10, {'title', 'label'})
-  fname = [config.figdir,'2_cyclicalpattern_', ext{1}];
+  fname = [config.figdir, 'figure2_circleplot/','2_cyclicalpattern_', ext{1}];
   save_figure(fname);
   save([fname, 'stat'], 'stat')
 end
@@ -46,16 +46,16 @@ end
 
 % also plot the *real* circle plot individually
 cyclicalstateplot(bestseq,mean_direction, sigpoints,color_scheme);
-title({'Observed rotational', sprintf('momentum = %0.3f', mean(hmm_1stlevel.rotational_momentum)./hmm_1stlevel.max_theoretical_rotational_momentum), ''})
-save_figure([config.figdir,'2ind_Cyclicalpattern']);
+title({'Observed rotational', sprintf('momentum = %0.3f', mean(hmm_1stlevel.cycle_metrics.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern']);
 
 % as well as the simulated
 cyclicalstateplot(simulation{1}.bestsequencemetrics{2},simulation{1}.mean_direction, simulation{1}.FO_pvals<(0.05/bonf_ncomparisons), color_scheme);
-title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.max_theoretical_rotational_momentum), ''})
-save_figure([config.figdir,'2ind_Cyclicalpattern_simulation1']);
+title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern_simulation1']);
 
 % and the simulation average
 cyclicalstateplot(simulation_average.bestsequencemetrics{2},simulation_average.mean_direction, simulation_average.FO_pvals<(0.05/bonf_ncomparisons), color_scheme);
-title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation_average.rotational_momentum)./hmm_1stlevel.max_theoretical_rotational_momentum), ''})
-save_figure([config.figdir,'2ind_Cyclicalpattern_simulationAvg']);
+title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation_average.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern_simulationAvg']);
 

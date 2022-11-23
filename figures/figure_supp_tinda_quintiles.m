@@ -15,7 +15,7 @@ for ip=1:length(percentiles)-1
   
   ax(ip,1) = axes('Position', [-.05, 1.02-0.2*ip, 0.45, 0.13]);
   cyclicalstatesubplot(bestseq,mean_direction_p,pvals_p<(alpha_thresh/bonf_ncomparisons));
-  title({sprintf('Rotational momentum = %0.3f', mean(rotational_momentum_p, 'omitnan')/hmm_1stlevel.max_theoretical_rotational_momentum),''})
+  title({sprintf('Rotational momentum = %0.3f', mean(rotational_momentum_p, 'omitnan')/hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum),''})
 
   
   ax(ip,2) = axes('Position', [0.45, 1.03-0.196*ip, 0.5, 0.15]);
@@ -32,7 +32,7 @@ for ip=1:length(percentiles)-1
 end
 set_font(10, {'title', 'label'})
 
-save_figure([config.figdir,'2supp_Cyclicalpatterns_percentiled']);
+save_figure([config.figdir, 'figure_supp_tinda_quintiles/','2supp_Cyclicalpatterns_percentiled']);
 close
 hmm_1stlevel.FO_quartile = FO_p;
 
@@ -57,5 +57,5 @@ subplot(1,2,2)
 shadedErrorBar((ITmean),mean(rotational_momentum_p,2), std(rotational_momentum_p,[],2)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
 yticks([0])
 xlabel('Mean IT (s)'), ylabel('Rotational Momentum')
-save_figure([config.figdir,'2supp_Cyclicalpatterns_rotationalmomentum_percentiled']);
+save_figure([config.figdir, 'figure_supp_tinda_quintiles/', '2supp_Cyclicalpatterns_rotationalmomentum_percentiled']);
 close
