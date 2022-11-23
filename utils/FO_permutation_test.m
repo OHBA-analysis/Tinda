@@ -14,7 +14,8 @@ cfg.design = [ones(1,nSj), 2*ones(1,nSj); 1:nSj, 1:nSj];
 cfg.ivar = 1;
 cfg.uvar = 2;
 cfg.numrandomization = 100000;
-
+cfg.tail = 0;
+cfg.correcttail = 'prob';
 pvals = zeros(K,K);
 
 tmp = permute(squeeze(FO(:,:,1,:)), [3,1,2]);

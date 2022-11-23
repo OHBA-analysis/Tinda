@@ -215,7 +215,9 @@ hmm_1stlevel.FO_intervals = FO_intervals;
 hmm_1stlevel.FO_stat = FO_stat;
 hmm_1stlevel.FO_pvals = FO_pvals;
 
-bonf_ncomparisons = 2*(K.^2-K);
+% correcting for the number of tests. Correcting for the two tails in the 
+% FO_assym is done inside the permutation test (FO_permutation_test)
+bonf_ncomparisons = (K.^2-K); 
 alpha_thresh = 0.05;
 if whichstudy==4
   alpha_thresh = 0.0000001 * alpha_thresh;
