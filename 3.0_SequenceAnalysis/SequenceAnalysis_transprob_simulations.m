@@ -7,11 +7,11 @@ for iperm=1:n_sim_perm
   for k=1:length(vpath)
     simulation_vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
   end
-  [simulation{iperm}.FO_intervals,simulation{iperm}.FO_pvals,simulation{iperm}.t_intervals] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
+  [simulation{iperm}.FO_intervals,simulation{iperm}.FO_pvals,simulation{iperm}.t_intervals, simulation{iperm}.FO_stat] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
   simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
   simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{2}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
 end
-hmm_1stlevel.FO_stats_simulation = simulation;
+hmm_1stlevel.simulation = simulation;
 
 
 % Is there something in the HMM transprob matrix when we look at the
@@ -46,7 +46,7 @@ simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_aver
 % simulation_average.cycle_metrics.circularity_stat_obs_vs_perm = stat_c;
 
 
-hmm_1stlevel.FO_stats_simulation_average = simulation_average;
+hmm_1stlevel.simulation_average = simulation_average;
 
 %% Group level FO assym
 
@@ -77,15 +77,4 @@ for sim=1:nsim
   [FO_group_sim{sim}, ~, ~] = computeLongTermAsymmetry({vpath_sim},{hmmT_sim},K);
 end
 FO_group_sim = cat(4,FO_all_sim{:});
-hmm_1stlevel.group_FO_simulation = FO_group_sim;
-
-hmm_1stlevel.FO_group_stats = [];
-hmm_1stlevel.FO_group_stats.FO_group_asym=FO_group(:,:,1)-FO_group(:,:,2);
-hmm_1stlevel.FO_group_stats.FO_group_asym_perm = squeeze(FO_group_sim(:,:,1,:)-FO_group_sim(:,:,2,:));
-% find whether there is a difference with the simulation
-pval_group = [];
-for k=1:12
-  for l=1:12
-    hmm_1stlevel.FO_group_stats.pval_group_vs_sim(k,l) = 1-sum(FO_all_asym(k,l)>squeeze(FO_all_asym_perm(k,l,:)))/nsim;
-  end
-end
+hmm_1stlevel.FO_simulation_group = FO_group_sim;
