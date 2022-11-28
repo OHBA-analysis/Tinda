@@ -39,7 +39,7 @@ else
     if strcmp(reordering_states, 'replay')
       load([config.hmmfolder,config.hmmfilename],'new_state_ordering');
     elseif strcmp(reordering_states, 'coherence')
-      load([config.figdir, 'coherence_state_ordering'], 'new_state_ordering');
+      load([config.resultsdir, 'coherence_state_ordering'], 'new_state_ordering');
     else
       new_state_ordering = 1:hmm.K;
     end
@@ -90,7 +90,7 @@ else
     coh = zeros(nF,nch,nch,12,nSj/nSes);
     
     if strcmp(reordering_states, 'coherence')
-      load([config.figdir, 'coherence_state_ordering']);
+      load([config.resultsdir, 'coherence_state_ordering']);
     else
       new_state_ordering = 1:hmm.K;
     end
