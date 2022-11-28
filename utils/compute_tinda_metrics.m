@@ -7,8 +7,12 @@ metrics = struct;
 
 metrics.mean_direction = squeeze(mean(FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:),4));
 metrics.mean_assym = squeeze(mean((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:))./mean(FO_intervals,3),4));
-
 metrics.FO_assym = squeeze((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:))./mean(FO_intervals,3));
+% also get measures for how well the fit is of subject with average pattern
+tmp = metrics.FO_assym;
+tmp = reshape(tmp, K*K, []);
+tmp(isnan(tmp))=0;
+metrics.FO_assym_subject_fit = corr(tmp, mean(tmp,2));
 
 
 % Rotational momentum is the rotational strength of the unthresholded FO
@@ -18,9 +22,14 @@ metrics.rotational_momentum = rotational_momentum;
 metrics.max_theoretical_rotational_momentum = compute_rotational_momentum(angleplot, sign(imag(angleplot)));
 
 % also get the metric for each state
+% Note that we are counting each (i,j) double because for the rotational
+% momentum per state we take into account (i,j) and (j,i) for all j and one
+% particular i. 
 for k=1:K
   metrics.rotational_momentum_perstate(:,k) = compute_rotational_momentum(angleplot, metrics.FO_assym, k);
 end
+metrics.max_theoretical_rotational_momentum_perstate = 2*metrics.max_theoretical_rotational_momentum/K;
+
 
 
 % TIDA is the mean(abs(FO_assym))
@@ -38,7 +47,7 @@ metrics.circularity = circularity;
 metrics.circularity_pval = circle_pval;
 if doplot
   set_font(10, {'title', 'label'})
-  save_figure([config.figdir,'2supp_CyclicalpatternVsPermutations']);
+  save_figure([config.figdir,'figure_supp_tinda_metrics/', '2supp_CyclicalpatternVsPermutations']);
 end
 
 % get the measure per subject
