@@ -1,8 +1,11 @@
 %% Figure 3: Spectral information in the circle plot
-
+local_clim=true;
 diffmode = {'rel'}; % whether to plot psd/coh relative to average over states
 use_sqrt_f = [true, false] ; % whether to plot PSD/coh with sqrt of f axis
 statecolor = [true, false]; % whether to plot PSD/coh in the state color
+parc = config.parc;
+mni_coords = parc.template_coordinates;
+clear yl tmp*
 for whichtopo = 1:3
   do_pow_or_coh = {'pow','coh', 'both'};
   do_pow_or_coh = do_pow_or_coh{whichtopo};
@@ -36,7 +39,7 @@ for whichtopo = 1:3
       fig = setup_figure([],2,1);
       ax(13,1) = axes('Position', [0.295 0.19 0.38 .6]); hold on
       axes(ax(13,1))
-      cyclicalstateplot(bestseq,mean_direction, zeros(12), color_scheme, false)
+      cyclicalstateplot(bestseq,hmm_1stlevel.cycle_metrics.mean_direction, zeros(12), color_scheme, false)
       
       for k=1:12
         ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
@@ -143,7 +146,7 @@ for whichtopo = 1:3
           [~, ax(k,3), ~] = plot_coh_topo(ax(k,3), mni_coords, graph, cohAvg_topo, [0 3], [], 95);  axis off      
         elseif strcmp(do_pow_or_coh, 'pow')
           ax(k,1) = axes('Position', [0 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
-%           plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
+          plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
         elseif  strcmp(do_pow_or_coh, 'coh')
           ax(k,1) = axes('Position', [0.01 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.08 0.08]);
           [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], 95);axis off
