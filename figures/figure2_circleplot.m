@@ -10,14 +10,14 @@ for ext = {'rotationalmomentum'}
   
   ax(2) = axes('Position', [0.375, 0, .3, 1]);
   cyclicalstateplot(simulation{1}.bestsequencemetrics{2},simulation{1}.cycle_metrics.mean_direction, simulation{1}.FO_pvals<alpha_thresh,color_scheme,false);
-  title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+  title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.cycle_metrics.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
   
   if strcmp(ext, 'FOasym') || strcmp(ext{1}, 'FOasym')
     tmp = [simulation{1}.TIDA, hmm_1stlevel.cycle_metrics.TIDA];
     ylb = 'Mean FO asymmetry';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1), 'tail', 'right');
   elseif strcmp(ext, 'rotationalmomentum') || strcmp(ext{1}, 'rotationalmomentum')
-    tmp = [simulation{1}.rotational_momentum, hmm_1stlevel.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
+    tmp = [simulation{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
     ylb = 'Rotational momentum';
     [stat.H, stat.P, stat.CI, stat.stats] = ttest(tmp(:,2),tmp(:,1));
   end
@@ -51,11 +51,11 @@ save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern']);
 
 % as well as the simulated
 cyclicalstateplot(simulation{1}.bestsequencemetrics{2},simulation{1}.cycle_metrics.mean_direction, simulation{1}.FO_pvals<(0.05/bonf_ncomparisons), color_scheme);
-title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation{1}.cycle_metrics.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
 save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern_simulation1']);
 
 % and the simulation average
 cyclicalstateplot(simulation_average.bestsequencemetrics{2},simulation_average.cycle_metrics.mean_direction, simulation_average.FO_pvals<(0.05/bonf_ncomparisons), color_scheme);
-title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation_average.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
+title({'Simulated rotational', sprintf('momentum = %0.3f', mean(simulation_average.cycle_metrics.rotational_momentum)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), ''})
 save_figure([config.figdir, 'figure2_circleplot/','2ind_Cyclicalpattern_simulationAvg']);
 
