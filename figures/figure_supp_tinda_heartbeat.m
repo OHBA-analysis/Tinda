@@ -26,4 +26,4 @@ save_figure([config.figdir, 'figure_supp_tinda_heartbeat/','2supp_Cyclicalpatter
 close
 
 % save metrics:
-hmm_1stlevel.FO_cardiaccontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));
+hmm_1stlevel.control.FO_cardiaccontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));

@@ -22,4 +22,4 @@ title('Interval times < 2.5 sec');xlabel('RSN-State'), ylabel('Interval time (se
 set_font(10, {'title', 'label'})
 save_figure([config.figdir, 'figure_supp_tinda_respiration/', '2supp_Cyclicalpatterns_lessthan2.5sec.png'])
 
-hmm_1stlevel.FO_respcontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));
+hmm_1stlevel.control.FO_respcontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));

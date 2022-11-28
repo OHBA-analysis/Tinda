@@ -34,7 +34,7 @@ set_font(10, {'title', 'label'})
 
 save_figure([config.figdir, 'figure_supp_tinda_quintiles/','2supp_Cyclicalpatterns_percentiled']);
 close
-hmm_1stlevel.FO_quartile = FO_p;
+hmm_1stlevel.control.FO_quintile = FO_p;
 
 % Make an extra plot with median interval time vs rotational momentum?
 [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentiles(ip:ip+1));
