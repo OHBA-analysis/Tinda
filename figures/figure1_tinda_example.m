@@ -148,7 +148,7 @@ if whichstudy==1
   %%%%%%%%%%%%%%%%%%%%%
   % DISTRIBUTION PLOT %
   %%%%%%%%%%%%%%%%%%%%%
-  sigpoints = pvals<(0.05/bonf_ncomparisons);
+  sigpoints = hmm_1stlevel.FO_pvals<(alpha_thresh/bonf_ncomparisons);
   for ii=1:12
     ax(4+ii) = axes('Position', [0.575 0.121+(12-ii)*0.031 0.1 0.022]);
     hold on
@@ -167,9 +167,9 @@ if whichstudy==1
       d{2} = squeeze(hmm_1stlevel.FO_intervals(whichstate,ii,2,:));
       % exagerate significant differences
       if sigpoints(ii,whichstate)
-        if mean_direction(ii,whichstate)<0
+        if hmm_1stlevel.cycle_metrics.mean_direction(ii,whichstate)<0
           d{1} = d{1}+0.5*mean(d{2});
-        elseif mean_direction(ii,whichstate)>0
+        elseif hmm_1stlevel.cycle_metrics.mean_direction(ii,whichstate)>0
           d{2} = d{2}+0.5*mean(d{2});
         end
       end
@@ -189,7 +189,7 @@ if whichstudy==1
   ax(25) = axes('Position', [0.70 0.3500 0.3 0.145]); axis off
   title('TINDA', 'FontSize', 10)
   ax(17) = axes('Position', [0.70 0.0500 0.3 0.4]);
-  cyclicalstateplot_perstate(bestseq,mean_direction,sigpoints,find(bestseq==whichstate),false);
+  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,sigpoints,find(bestseq==whichstate),false);
   % seq=[12:-1:1];
 %     cyclicalstateplot_perstate(seq,mean_direction,sigpoints,find(seq==whichstate),false);
   
@@ -203,11 +203,8 @@ if whichstudy==1
   ax(21) = axes('Position',[0.34+0.16   0.6  0.175 0.2] ); % bottom right
   ax(26) = axes('Position', [0.37 0.80 0.3 0.15]); axis off
   title('PSD', 'FontSize', 10)
-  if use_WB_nnmf
-    pow_topo = squeeze(nanmean(psd_wb(:,whichstate,:),1));
-  else
-    pow_topo = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
-  end
+    pow_topo = pow_state_topo{whichstate};
+
   toplot = (pow_topo)./(powAvg_topo) - 1;%-mean(net_mean,2);
   if local_clim
     CL = max(abs(toplot(:)))*[-1, 1];%[min(squash(toplot(:,:))) max(squash(toplot(:,:)))];
@@ -224,11 +221,7 @@ if whichstudy==1
   ax(23) = axes('Position',[0.63+0.18  0.765 0.24 0.24] ); % right
   ax(24) = axes('Position',[.74 0.6 0.22 0.22]);% bottom
   
-  if use_WB_nnmf
-    graph = squeeze(nanmean(coh_wb(:,whichstate,:,:)));
-  else
-    graph = squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1));
-  end
+  graph = coh_state_topo{whichstate};
   [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, cohAvg_topo, [], [], 95);
 
   ax(27) = axes('Position', [0.7 0.80 0.3 0.15]); axis off

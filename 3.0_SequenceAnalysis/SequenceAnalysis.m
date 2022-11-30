@@ -148,6 +148,20 @@ fname = [config.resultsdir, 'coherence_state_ordering'];
 
 loadHMMspectra_MT
 
+% prepare sepctra and topos
+for whichstate = 1:K
+  pow_state_freq{whichstate} = (squeeze(nanmean((psd(:,whichstate,:,:)),4)));
+  C = coh(:,:,:,offdiagselect);
+  coh_state_freq{whichstate} = (squeeze(nanmean(C(:,whichstate,:,:),4)));
+  if use_WB_nnmf
+    pow_state_topo{whichstate} = squeeze(nanmean((psd_wb(:,whichstate,:)),1));
+    coh_state_topo{whichstate} = squeeze(mean(coh_wb(:,whichstate,:,:),1));
+  else
+    pow_state_topo{whichstate} = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
+    coh_state_topo{whichstate} = squeeze(mean(mean(coh(:,whichstate,:,:,:),3),1));
+  end
+end
+
 %% Compute long term assymetry:
 
 [FO_intervals,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
