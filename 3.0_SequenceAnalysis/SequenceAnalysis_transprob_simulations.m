@@ -8,14 +8,18 @@ for iperm=1:n_sim_perm
     simulation_vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
   end
   [simulation{iperm}.FO_intervals,simulation{iperm}.FO_pvals,simulation{iperm}.t_intervals, simulation{iperm}.FO_stat] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
-  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
-  simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{2}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
+  if iperm<=100
+    simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
+    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{2}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
+  else
+        simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
+  end
 end
 hmm_1stlevel.simulation = simulation;
 
 
 % Is there something in the HMM transprob matrix when we look at the
-% simulation aggregate? 
+% simulation aggregate?
 simulation_average=[];
 for k=1:n_sim_perm
   simulation_average.FO_intervals(:,:,:,:,k) = simulation{k}.FO_intervals;
@@ -33,7 +37,7 @@ simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_aver
 % dat2=dat1;
 % dat1.trial =  hmm_1stlevel.circularity_subject;
 % dat2.trial = hmm_1stlevel.FO_stats_simulation_average.circularity_subject;
-% 
+%
 % cfg=[];
 % cfg.method = 'montecarlo';
 % cfg.statistic = 'depsamplesT';
@@ -76,5 +80,43 @@ for sim=1:nsim
   end
   [FO_group_sim{sim}, ~, ~] = computeLongTermAsymmetry({vpath_sim},{hmmT_sim},K);
 end
-FO_group_sim = cat(4,FO_all_sim{:});
+FO_group_sim = cat(4,FO_group_sim{:});
 hmm_1stlevel.FO_simulation_group = FO_group_sim;
+
+%% Compare the observed metrics with the simulated ones
+% per subject measures
+cfg=[];
+cfg.method = 'montecarlo';
+cfg.statistic = 'depsamplesT';
+cfg.design = [ones(1,config.nSj), 2*ones(1,config.nSj); 1:config.nSj, 1:config.nSj];
+cfg.ivar = 1;
+cfg.uvar = 2;
+cfg.numrandomization = 100000;
+cfg.correcttail = 'prob';
+
+dat1=[];
+dat1.dimord = 'rpt_chan_time';
+dat1.label{1} = 'metric';
+
+measures = {'FO_assym_subject_fit', 'TIDA', 'rotational_momentum', 'circularity_subject', 'TIDA_perstate', 'rotational_momentum_perstate'};
+for im = measures
+  m = im{1};
+  if strcmp(m, 'FO_assym_subject_fit') || strcmp(m, 'TIDA') ||... 
+      strcmp(m, 'TIDA_perstate') || strcmp(m, 'circularity') % these are all positive numbers
+    cfg.tail = 1;
+  else
+    cfg.tail = -1; % rotational momentum should have a tail of -1
+  end
+  
+  dat1.time=1:size(hmm_1stlevel.cycle_metrics.(m),2);
+  dat1.trial = [];
+  dat2=dat1;
+  
+  dat1.trial(:,1,:) = hmm_1stlevel.cycle_metrics.(m);
+  dat2.trial(:,1,:) = hmm_1stlevel.simulation{1}.cycle_metrics.(m);
+  
+  hmm_1stlevel.metric_vs_sim.(m) = ft_timelockstatistics(cfg, dat1, dat2);
+  
+  dat2.trial(:,1,:) = hmm_1stlevel.simulation_average.cycle_metrics.(m);
+  hmm_1stlevel.metric_vs_sim_avg.(m) = ft_timelockstatistics(cfg, dat1, dat2);
+end

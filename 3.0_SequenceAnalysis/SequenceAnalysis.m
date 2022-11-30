@@ -203,44 +203,6 @@ SequenceAnalysis_transprob_simulations
 % saved in hmm_1stlevel.FO_state_simulation
 
 
-% and compare the observed metrics with the simulated ones
-% per subject measures
-cfg=[];
-cfg.method = 'montecarlo';
-cfg.statistic = 'depsamplesT';
-cfg.design = [ones(1,config.nSj), 2*ones(1,config.nSj); 1:config.nSj, 1:config.nSj];
-cfg.ivar = 1;
-cfg.uvar = 2;
-cfg.numrandomization = 100000;
-cfg.correcttail = 'prob';
-
-dat1=[];
-dat1.dimord = 'rpt_chan_time';
-dat1.label{1} = 'metric';
-
-measures = {'FO_assym_subject_fit', 'TIDA', 'rotational_momentum', 'circularity_subject', 'TIDA_perstate', 'rotational_momentum_perstate'};
-for im = measures
-  m = im{1};
-  if strcmp(m, 'FO_assym_subject_fit') || strcmp(m, 'TIDA') ||... 
-      strcmp(m, 'TIDA_perstate') || strcmp(m, 'circularity') % these are all positive numbers
-    cfg.tail = 1;
-  else
-    cfg.tail = -1; % rotational momentum should have a tail of -1
-  end
-  
-  dat1.time=1:size(hmm_1stlevel.cycle_metrics.(m),2);
-  dat1.trial = [];
-  dat2=dat1;
-  
-  dat1.trial(:,1,:) = hmm_1stlevel.cycle_metrics.(m);
-  dat2.trial(:,1,:) = hmm_1stlevel.simulation{1}.cycle_metrics.(m);
-  
-  hmm_1stlevel.metric_vs_sim.(m) = ft_timelockstatistics(cfg, dat1, dat2);
-  
-  dat2.trial(:,1,:) = hmm_1stlevel.simulation_average.cycle_metrics.(m);
-  hmm_1stlevel.metric_vs_sim_avg.(m) = ft_timelockstatistics(cfg, dat1, dat2);
-end
-
 
 %% plot HMM summary statistics
 figure_supp_hmm_stats
