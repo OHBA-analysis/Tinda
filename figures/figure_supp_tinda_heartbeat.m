@@ -7,7 +7,7 @@ percentile = [maxHR*config.sample_rate,NaN]; % shortest permissible intervals:
 [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentile);
 mean_direction_p = squeeze(nanmean(FO_p(:,:,1,:)-FO_p(:,:,2,:),4));
 FO_assym_p = squeeze((FO_p(:,:,1,:)-FO_p(:,:,2,:))./mean(FO_p,3));
-rotational_momentum_p = squeeze(imag(sum(sum(angleplot.*FO_assym_p))));
+rotational_momentum_p = compute_rotational_momentum(angleplot, FO_assym_p);
 ITmerged = cellfun(@mean,t_intervals_p);ITmerged = ITmerged./config.sample_rate;
 
 fig = setup_figure([], 2,0.4); clear ax
@@ -26,4 +26,4 @@ save_figure([config.figdir, 'figure_supp_tinda_heartbeat/','2supp_Cyclicalpatter
 close
 
 % save metrics:
-hmm_1stlevel.control.FO_cardiaccontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO,3));
+hmm_1stlevel.control.FO_cardiaccontrol = squeeze([FO_p(:,:,1,:) - FO_p(:,:,2,:)]./mean(FO_p,3));

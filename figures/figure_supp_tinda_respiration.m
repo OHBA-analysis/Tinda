@@ -6,7 +6,7 @@ percentile = [NaN,minRR*config.sample_rate]; % shortest permissible intervals:
 [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentile);
 mean_direction_p = squeeze(nanmean(FO_p(:,:,1,:)-FO_p(:,:,2,:),4));
 FO_assym_p = squeeze((FO_p(:,:,1,:)-FO_p(:,:,2,:))./mean(FO_p,3));
-rotational_momentum_p = squeeze(imag(sum(sum(angleplot.*FO_assym_p))));
+rotational_momentum_p = compute_rotational_momentum(angleplot, FO_assym_p);
 ITmerged = cellfun(@mean,t_intervals_p);ITmerged = ITmerged./config.sample_rate;
 
 fig = setup_figure([], 2,0.4); clear ax
