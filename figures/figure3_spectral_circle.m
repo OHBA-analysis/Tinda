@@ -1,13 +1,13 @@
 %% Figure 3: Spectral information in the circle plot
 local_clim=true;
 diffmode = {'rel'}; % whether to plot psd/coh relative to average over states
-use_sqrt_f = [true, false] ; % whether to plot PSD/coh with sqrt of f axis
+use_sqrt_f = [true];%[true, false] ; % whether to plot PSD/coh with sqrt of f axis
 statecolor = [true, false]; % whether to plot PSD/coh in the state color
 parc = config.parc;
 mni_coords = parc.template_coordinates;
 clear yl tmp*
-for whichtopo = 1:3
-  do_pow_or_coh = {'pow','coh', 'both'};
+for whichtopo = 1:2%3
+  do_pow_or_coh = {'pow','coh'};% 'both'
   do_pow_or_coh = do_pow_or_coh{whichtopo};
   for sc = statecolor
     if sc
