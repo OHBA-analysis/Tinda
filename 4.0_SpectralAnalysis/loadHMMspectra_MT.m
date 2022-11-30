@@ -30,10 +30,10 @@ if useMT
     end
   end
   
-  psd = tmp.psd(:,new_state_ordering,:,:);
-  coh = tmp.coh(:,new_state_ordering,:,:,:);
-  nnmf_psd = tmp.nnmf_psd(:,new_state_ordering,:,:);
-  nnmf_coh = tmp.nnmf_coh(:,new_state_ordering,:,:,:);
+  psd = psd(:,new_state_ordering,:,:);
+  coh = coh(:,new_state_ordering,:,:,:);
+  nnmf_psd = nnmf_psd(:,new_state_ordering,:,:);
+  nnmf_coh = nnmf_coh(:,new_state_ordering,:,:,:);
   
   f_orig = f;
 %   psd = abs(psd(:,:,1:nearest(f,30), :));
