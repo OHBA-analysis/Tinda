@@ -40,12 +40,13 @@ hmm_1stlevel.control.FO_quintile = FO_p;
 [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,percentiles(ip:ip+1));
 
 percentiles = 5:5:95;
+clear rotational_momentum_p
 for ip=1:length(percentiles)
   [FO_p,pvals_p,t_intervals_p] = computeLongTermAsymmetry(vpath,hmmT,K,[percentiles(ip)-4 percentiles(ip)+5]);
   FO_assym_p = squeeze((FO_p(:,:,1,:)-FO_p(:,:,2,:))./mean(FO_p,3));
   ITmean(ip) = mean(mean(cellfun(@mean,t_intervals_p)));ITmean(ip) = ITmean(ip)./config.sample_rate;
   % ITmedian(ip) = cellfun(@median,t_intervals_p);ITmedian(ip) = ITmedian(ip)./config.sample_rate;
-  rotational_momentum_p(ip,:) = squeeze(imag(nansum(nansum(angleplot.*FO_assym_p))));
+  rotational_momentum_p(ip,:) = compute_rotational_momentum(angleplot, FO_assym_p);
 end
 
 fig = setup_figure([],2,0.6);

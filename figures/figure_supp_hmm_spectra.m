@@ -52,9 +52,13 @@ legend(l, 'Location', 'EastOutside', 'NumColumns', 1)
 box off
 axis square
 set_font(10, {'label', 'title'})
-xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
-ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
-
+if use_WB_nnmf
+  xlim(log10([min(min((squeeze(nanmean((psd_wb),3)))))*0.95, max(max((squeeze(nanmean((psd_wb),3)))))*1.05]))
+  ylim(log10([min(min((squeeze(nanmean((coh_wb(:,:,offdiagselect)),3)))))*1.05, max(max((squeeze(nanmean((coh_wb(:,:,offdiagselect)),3)))))*0.95]))
+else
+  xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
+  ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
+end
 save_figure([config.figdir, 'figure_supp_hmm_spectra/','1supp_PSDvsCoh'] )
 
 %% Also plot the NNMF if used
