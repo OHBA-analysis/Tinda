@@ -24,7 +24,7 @@ metrics.max_theoretical_rotational_momentum = compute_rotational_momentum(anglep
 % also get the metric for each state
 % Note that we are counting each (i,j) double because for the rotational
 % momentum per state we take into account (i,j) and (j,i) for all j and one
-% particular i. 
+% particular i.
 for k=1:K
   metrics.rotational_momentum_perstate(:,k) = compute_rotational_momentum(angleplot, metrics.FO_assym, k);
 end
@@ -42,17 +42,19 @@ end
 
 % Circularity is the normalised, thresholded clockwise distance (e.g. done
 % on the circle plot
-[circularity, circle_pval, ~, ~, fig] = geometric_circularity(bestseq, metrics.mean_direction, sigpoints,[],[],doplot,color_scheme);
-metrics.circularity = circularity;
-metrics.circularity_pval = circle_pval;
-if doplot
-  set_font(10, {'title', 'label'})
-  save_figure([config.figdir,'figure_supp_tinda_metrics/', '2supp_CyclicalpatternVsPermutations']);
-end
-
-% get the measure per subject
-tmp = metrics.FO_assym; 
-tmp(isnan(tmp))=0;
-for k=1:config.nSj
-  [metrics.circularity_subject(k,1), metrics.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(bestseq, tmp(:, :,k), sigpoints,[],[],0, color_scheme);
+if ~isempty(bestseq)
+  [circularity, circle_pval, ~, ~, fig] = geometric_circularity(bestseq, metrics.mean_direction, sigpoints,[],[],doplot,color_scheme);
+  metrics.circularity = circularity;
+  metrics.circularity_pval = circle_pval;
+  if doplot
+    set_font(10, {'title', 'label'})
+    save_figure([config.figdir,'figure_supp_tinda_metrics/', '2supp_CyclicalpatternVsPermutations']);
+  end
+  
+  % get the measure per subject
+  tmp = metrics.FO_assym;
+  tmp(isnan(tmp))=0;
+  for k=1:config.nSj
+    [metrics.circularity_subject(k,1), metrics.circularity_pval_subject(k,1), ~, ~, ~] = geometric_circularity(bestseq, tmp(:, :,k), sigpoints,[],[],0, color_scheme);
+  end
 end
