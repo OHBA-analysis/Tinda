@@ -2,11 +2,15 @@ if useMT
   if whichstudy==4
     f = h5read([config.resultsdir, 'spectra/spectra.h5'], '/f');
     psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/psd');
+    psd = double(permute(psd.r, [4,3,2,1]));
     coh = h5read([config.resultsdir, 'spectra/spectra.h5'], '/coh');
+    coh = permute(coh, [5,4,3,1,2]);
     subj_weight = h5read([config.resultsdir, 'spectra/spectra.h5'], '/w');
     wb_comp = h5read([config.resultsdir, 'spectra/spectra.h5'], '/wb_comp');
     nnmf_psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/nnmf_psd');
+    nnmf_psd = permute(nnmf_psd, [4,3,2,1]);
     nnmf_coh = h5read([config.resultsdir, 'spectra/spectra.h5'], '/nnmf_coh');
+    nnmf_coh = permute(nnmf_coh, [5,4,3,1,2]);
   else
     load([config.resultsdir, 'spectra/spectra.mat']);
     subj_weight = w; % fraction of total training data per subject (for weighting FO)
