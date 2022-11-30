@@ -36,11 +36,10 @@ for whichstate =1:K
   cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.FO_pvals<(alpha/bonf_ncomparisons),find(bestseq==whichstate),false);
   
   ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);cla; hold on
-  pow = (squeeze(nanmean((psd(:,whichstate,:,:)),4)));
+  pow = pow_state_freq{whichstate};
   
   plot(f,(powAvg_freq), '--', 'Color', [.8 .8 .8])
   shadedErrorBar(f,mean(pow,1), std(pow,[],1)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
-  pow_state_freq{whichstate} = pow;
   set(gca, 'YTick', [])
   set(gca, 'Xtick', nearest(f,30)/4:nearest(f,30)/4:nearest(f,30))
   xlabel('Frequency (Hz)')
@@ -53,13 +52,8 @@ for whichstate =1:K
   ax(3) = axes('Position',[0.23  0.25  0.21 0.21]); % top right
   ax(4) = axes('Position',[0.03  0.05 0.21 0.21]);% bottom left
   ax(5) = axes('Position',[0.2   0.05 0.21 0.21]); % bottom right
-if use_WB_nnmf
-      pow_topo = squeeze(nanmean((psd_wb(:,whichstate,:)),1));
-else
-  pow_topo = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
-end
-
-  pow_state_topo{whichstate} = pow_topo;
+  
+  pow_topo =   pow_state_topo{whichstate};
   toplot = (pow_topo)./(powAvg_topo) - 1;%-mean(net_mean,2);
   if local_clim
     CL = max(abs(toplot(:)))*[-1, 1];%[min(squash(toplot(:,:))) max(squash(toplot(:,:)))];
@@ -73,22 +67,16 @@ end
   ax(6) = axes('Position',[0.5 0.225  0.24 0.24]);cla
   ax(7) = axes('Position',[0.75  0.225  0.24 0.24]);cla
   ax(8) = axes('Position',[0.625 0.05 0.24 0.24]);cla;
-  if use_WB_nnmf
-    graph = squeeze(mean(coh_wb(:,whichstate,:,:),1));
-  else
-    graph = squeeze(mean(mean(coh(:,whichstate,:,:,:),3),1));
-  end
   
-  coh_state_topo{whichstate} = graph;
+  graph = coh_state_topo{whichstate};
   [~, ax(6:8), ~] = plot_coh_topo(ax(6:8), mni_coords, graph, cohAvg_topo, [], [], th);
   
   
   ax(10) = axes('Position', [0.73 0.53, 0.25, 0.4]);cla; hold on
-  C = coh(:,:,:,offdiagselect);
-  C = (squeeze(nanmean(C(:,whichstate,:,:),4)));
+  C = coh_state_freq{whichstate};
   plot(f, (cohAvg_freq), '--', 'Color', [.8 .8 .8])
   shadedErrorBar(f,mean(C,1), std(C,[],1)./sqrt(config.nSj), {'LineWidth', 2, 'Color', 'k'},1)
-  coh_state_freq{whichstate} = C;
+  
   set(gca, 'YTick', [])
   set(gca, 'Xtick', nearest(f,30)/4:nearest(f,30)/4:nearest(f,30))
   xlabel('Frequency (Hz)')
@@ -102,7 +90,7 @@ end
     colormap(ax(ii), cmap)
   end
   set_font(10, {'title', 'label'})
-%   save_figure(fig, [config.figdir, 'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate)],false);
+  %   save_figure(fig, [config.figdir, 'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate)],false);
   
   % also save the one with relative x axis
   axes(ax(9))
