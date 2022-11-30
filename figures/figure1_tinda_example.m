@@ -203,8 +203,11 @@ if whichstudy==1
   ax(21) = axes('Position',[0.34+0.16   0.6  0.175 0.2] ); % bottom right
   ax(26) = axes('Position', [0.37 0.80 0.3 0.15]); axis off
   title('PSD', 'FontSize', 10)
-  
-  pow_topo = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
+  if use_WB_nnmf
+    pow_topo = squeeze(nanmean(psd_wb(:,whichstate,:),1));
+  else
+    pow_topo = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
+  end
   toplot = (pow_topo)./(powAvg_topo) - 1;%-mean(net_mean,2);
   if local_clim
     CL = max(abs(toplot(:)))*[-1, 1];%[min(squash(toplot(:,:))) max(squash(toplot(:,:)))];
@@ -221,7 +224,11 @@ if whichstudy==1
   ax(23) = axes('Position',[0.63+0.18  0.765 0.24 0.24] ); % right
   ax(24) = axes('Position',[.74 0.6 0.22 0.22]);% bottom
   
-  graph = squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1));
+  if use_WB_nnmf
+    graph = squeeze(nanmean(coh_wb(:,whichstate,:,:)));
+  else
+    graph = squeeze(nanmean(nanmean(coh(:,whichstate,:,:,:),3),1));
+  end
   [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, cohAvg_topo, [], [], 95);
 
   ax(27) = axes('Position', [0.7 0.80 0.3 0.15]); axis off

@@ -15,8 +15,16 @@ else
 end
 if whichstudy==1
   statelabels = {'default mode', 'parietal alpha', 'fronto-temporal', 'visual', 'language', 'default mode', 'sensorimotor', 'parietal alpha', 'dorsal attention', 'R auditory', 'fronto-temporal', 'sensorimotor'};
+elseif whichstudy==3
+  statelabels = {'default mode', 'sensorimotor', 'visual', 'fronto-temporal', 'central' , 'language', 'visual', 'parietal alpha', 'sensorimotor', 'default mode', 'sensorimotor', 'dorsal attention'};
+elseif whichstudy==4
+  statelabels = {'', '', '', '', '' , '', '', '', '', '', '', ''};
 end
-
+if whichstudy==1
+  th = 95;
+else
+  th = 98;
+end
 for whichstate =1:K
   
   fig = setup_figure([],2,0.75); axis off
@@ -25,7 +33,7 @@ for whichstate =1:K
   ax(11) = axes('Position', [0.35 0.74 0.3 0.145]); axis off
   title('TINDA', 'FontSize', 10)
   ax(1) = axes('Position', [0.325 0.5, 0.35, 0.35]);
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(alpha/bonf_ncomparisons),find(bestseq==whichstate),false);
+  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.FO_pvals<(alpha/bonf_ncomparisons),find(bestseq==whichstate),false);
   
   ax(9) = axes('Position', [0.05 0.53, 0.25, 0.4]);cla; hold on
   pow = (squeeze(nanmean((psd(:,whichstate,:,:)),4)));
@@ -45,8 +53,12 @@ for whichstate =1:K
   ax(3) = axes('Position',[0.23  0.25  0.21 0.21]); % top right
   ax(4) = axes('Position',[0.03  0.05 0.21 0.21]);% bottom left
   ax(5) = axes('Position',[0.2   0.05 0.21 0.21]); % bottom right
-  
+if use_WB_nnmf
+      pow_topo = squeeze(nanmean((psd_wb(:,whichstate,:)),1));
+else
   pow_topo = squeeze(nanmean(nanmean((psd(:,whichstate,:,:)),3),1));
+end
+
   pow_state_topo{whichstate} = pow_topo;
   toplot = (pow_topo)./(powAvg_topo) - 1;%-mean(net_mean,2);
   if local_clim
@@ -61,9 +73,14 @@ for whichstate =1:K
   ax(6) = axes('Position',[0.5 0.225  0.24 0.24]);cla
   ax(7) = axes('Position',[0.75  0.225  0.24 0.24]);cla
   ax(8) = axes('Position',[0.625 0.05 0.24 0.24]);cla;
-  graph = squeeze(mean(mean(coh(:,whichstate,:,:,:),3),1));
+  if use_WB_nnmf
+    graph = squeeze(mean(coh_wb(:,whichstate,:,:),1));
+  else
+    graph = squeeze(mean(mean(coh(:,whichstate,:,:,:),3),1));
+  end
+  
   coh_state_topo{whichstate} = graph;
-  [~, ax(6:8), ~] = plot_coh_topo(ax(6:8), mni_coords, graph, cohAvg_topo, [], [], 95);
+  [~, ax(6:8), ~] = plot_coh_topo(ax(6:8), mni_coords, graph, cohAvg_topo, [], [], th);
   
   
   ax(10) = axes('Position', [0.73 0.53, 0.25, 0.4]);cla; hold on
@@ -85,7 +102,7 @@ for whichstate =1:K
     colormap(ax(ii), cmap)
   end
   set_font(10, {'title', 'label'})
-  save_figure(fig, [config.figdir, 'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate)],false);
+%   save_figure(fig, [config.figdir, 'figure_supp_tinda_states/', '1supp_tinda_state',int2str(whichstate)],false);
   
   % also save the one with relative x axis
   axes(ax(9))
@@ -108,9 +125,9 @@ end
 %% Fig 1 supplement: plot as multiple individual state plots:
 fig=setup_figure([],2,1);
 if whichstudy<4
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<(0.05/bonf_ncomparisons),[],false,color_scheme);
+  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.FO_pvals<(0.05/bonf_ncomparisons),[],false,color_scheme);
 else
-  cyclicalstateplot_perstate(bestseq,mean_direction,pvals<0.0000001*(0.05/bonf_ncomparisons),[],false, color_scheme);
+  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.FO_pvals<0.0000001*(0.05/bonf_ncomparisons),[],false, color_scheme);
 end
 save_figure([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways']);
 

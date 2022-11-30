@@ -15,10 +15,10 @@ for relorabs = {'abs', 'rel'}
     if strcmp(relorabs, 'rel')
       plot(sqrtf,Pmean(i,:),'Color',color_scheme{i},'LineStyle',ls{1+(i>6)},'LineWidth',2);
       set_sqrt_ax(f)
-      xlim(sqrt([f(1), 30]))
+      xlim(sqrt([f(1), f(end)]))
     else
       plot(f,Pmean(i,:),'Color',color_scheme{i},'LineStyle',ls{1+(i>6)},'LineWidth',2);
-      xlim([f(1), 30])
+      xlim([f(1), f(end)])
     end
     hold on;
     leglabels{i} = ['State ',int2str(i)];
@@ -35,7 +35,11 @@ end
 
 fig = setup_figure([],1,.75); hold on
 for k=1:K
-  scatter((squeeze(log10(nanmean(nanmean((psd(:,k,:,:)),4),3)))), log10(squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+  if use_WB_nnmf
+    scatter((squeeze(log10(nanmean((psd_wb(:,k,:)),3)))), log10(squeeze(nanmean(coh_wb(:,k,offdiagselect),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+  else
+    scatter((squeeze(log10(nanmean(nanmean((psd(:,k,:,:)),4),3)))), log10(squeeze(nanmean(nanmean((coh(:,k,:,offdiagselect)),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+  end
   l{k} = sprintf('State %d', k);
 end
 % axis off
@@ -52,3 +56,15 @@ xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((sque
 ylim(log10([min(min((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean((coh(:,:,:,offdiagselect)),4),3)))))*0.95]))
 
 save_figure([config.figdir, 'figure_supp_hmm_spectra/','1supp_PSDvsCoh'] )
+
+%% Also plot the NNMF if used
+if use_WB_nnmf
+  fig = setup_figure([],1,1);
+  plot(f_orig, wb_comp);
+  ylabel('Coherence')
+  xlabel('Frequency (Hz)')
+  title('2-mode NNMF denoises spectra')
+  legend({'mode 1', 'mode 2'})
+  save_figure([config.figdir, 'figure_supp_hmm_spectra/','1supp_WB_nnmf'] )
+end
+

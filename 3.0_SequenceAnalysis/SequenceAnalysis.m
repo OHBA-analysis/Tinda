@@ -15,11 +15,21 @@ if simtests
   config.figdir = strrep(config.figdir,['Study',int2str(whichstudy)],['Study',int2str(whichstudy),'_simtest']);
   mkdir(config.figdir);
 end
-use_WB_nnmf=false; % whether or not to use the wide band NNMF as in Higgins 2020 to select power and coherence (alternative is selecting 1-30 Hz)
+use_WB_nnmf=true; % whether or not to use the wide band NNMF Diego's Nature Comms to select power and coherence (alternative is selecting 1-30 Hz)
+useMT = true; % use the MT results instead of Cam's wavelet approach
 
 %% Load HMM results
 % first load data and plot basic temporal statistics:
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
+
+fname_stateorder = 'coherence_state_ordering';
+if useMT
+  if use_WB_nnmf
+    fname_stateorder = [fname_stateorder, '_MT_nnmf'];
+  else
+    fname_stateorder = [fname_stateorder, '_MT'];
+  end
+end
 
 hmm = temp.hmm;
 if ~isfield(hmm,'gamma') && whichstudy<4
@@ -31,7 +41,7 @@ if whichstudy<3
   if strcmp(config.reordering_states, 'replay')
     new_state_ordering = temp.new_state_ordering;
   elseif strcmp(config.reordering_states, 'coherence')
-    load([config.resultsdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, fname_stateorder])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -41,7 +51,7 @@ if whichstudy<3
   end
 elseif whichstudy==3
   if strcmp(config.reordering_states, 'coherence')
-    load([config.resultsdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, fname_stateorder])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -64,7 +74,7 @@ elseif whichstudy==3
   clear hmmTsubj hmmTold;
 elseif whichstudy==4
   if strcmp(config.reordering_states, 'coherence')
-    load([config.resultsdir, 'coherence_state_ordering.mat'])
+    load([config.resultsdir, fname_stateorder])
   else
     new_state_ordering=1:hmm.K;
   end
@@ -131,82 +141,12 @@ hmm_1stlevel.IT_mu = ITmerged;
 hmm_1stlevel.IT_med = ITmedian;
 hmm_1stlevel.IT_std = ITstd;
 
-%% load wavelet PSDs for each state:
+%% load MT PSDs for each state:
 diagselect = find(eye(config.parc.n_parcels));
 offdiagselect = find(~eye(config.parc.n_parcels));
-fname = [config.resultsdir, 'coherence_state_ordering.mat'];
+fname = [config.resultsdir, 'coherence_state_ordering'];
 
-if whichstudy==3
-  % for HCP need to recompute run indices (each subject has multiple runs)
-  run_inds = zeros(size(hmm.statepath));
-  t_offset = 0;
-  for i=1:length(hmmT)
-    t_length = sum(hmmT{i}) - length(hmmT{1})*(length(hmm.train.embeddedlags)-1);
-    run_inds(t_offset + [1:t_length]) = i;
-    t_offset = t_offset + t_length;
-  end
-  if strcmp(config.reordering_states, 'coherence')
-    if ~isfile(fname)
-      [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[],false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
-      save(fname, 'new_state_ordering')
-      P = pow_no_ordering(:, new_state_ordering,:,:,:);
-      coh = coh_no_ordering(:, new_state_ordering,:,:,:);
-    else
-      [P, coh, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[], false);
-    end
-  else
-    [P, coh, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[], false);
-  end
-  [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[],false);
-elseif whichstudy==4
-  % compute FO per subj:
-  for i=1:length(vpath)
-    for k=1:K
-      FO_subj(i,k) = mean(vpath{i}==k);
-    end
-  end
-  if strcmp(config.reordering_states, 'coherence')
-    if ~isfile(fname)
-      [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
-      save(fname, 'new_state_ordering')
-      P = pow_no_ordering(:, new_state_ordering,:,:,:);
-      coh = coh_no_ordering(:, new_state_ordering,:,:,:);
-    else
-      [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false);
-    end
-  else
-    [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,[],FO_subj,false);
-  end
-else
-  % Find the coherence state ordering (low to high coherence)
-  if strcmp(config.reordering_states, 'coherence')
-    if ~isfile(fname)
-      [pow_no_ordering, coh_no_ordering, f] = loadHMMspectra(config,whichstudy,hmm,hmm.subj_inds,[],false, false);
-      [~, new_state_ordering] = sort(nanmean(nanmean(nanmean(coh_no_ordering(:,:,1:nearest(f,30),offdiagselect),4),3),1), 'descend');
-      save(fname, 'new_state_ordering')
-    end
-  end
-  [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,hmm.subj_inds,[],false);
-end
-
-psd = abs(P(:,:,1:nearest(f,30), diagselect));
-coh = coh(:,:,1:nearest(f,30), :,:);
-coh(:,:,:,diagselect)=0;
-f = f(1:nearest(f, 30));
-sqrtf=sqrt(f);
-%
-% get the static power and coherence, i.e. weighted by FO
-sz=size(psd);
-static_pow = repmat(mean(hmm_1stlevel.FO), [sz(1),1, sz([3 4])]) .* psd;
-sz=size(coh);
-static_coh = repmat(mean(hmm_1stlevel.FO), [sz(1),1, sz([3 4,5])]) .* coh;
-% now get the parcel/frequency averages for plotting
-powAvg_freq = nanmean(squeeze(sum(nanmean(static_pow,4),2)));
-powAvg_topo = squeeze(nanmean(sum(nanmean(static_pow,3),2),1));
-cohAvg_freq = nanmean(squeeze(sum(nanmean(static_coh(:,:,:,offdiagselect),4),2)));
-cohAvg_topo = squeeze(nanmean(sum(nanmean(static_coh,3),2),1));
+loadHMMspectra_MT
 
 %% Compute long term assymetry:
 
