@@ -68,6 +68,8 @@ for i=1:length(filenames)
     %end
     mat_files_orth{i} = fnamemat;
 end
+save([dirname_matfiles, 'matfiles.mat'], 'mat_files_orth')
+
 SR = unique(SR);
 if length(SR)>1
     error('Data not at same sample rate');
