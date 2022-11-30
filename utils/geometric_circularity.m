@@ -61,7 +61,11 @@ if all(sigpoints(:)==0)
   pval=nan;
   circularity_perm=[];
   permuted_graphs=[];
-  fig=setup_figure([],2,0.75);
+  if doplot
+    fig=setup_figure([],2,0.75);
+  else
+    fig=[];
+  end
   return
 end
 
