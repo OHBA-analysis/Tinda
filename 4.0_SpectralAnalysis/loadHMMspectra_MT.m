@@ -5,7 +5,7 @@ if useMT
     psd = double(permute(psd.r, [4,3,2,1]));
     coh = h5read([config.resultsdir, 'spectra/spectra.h5'], '/coh');
     coh = permute(coh, [5,4,3,1,2]);
-    subj_weight = h5read([config.resultsdir, 'spectra/spectra.h5'], '/w');
+    subj_weight = h5read([config.resultsdir, 'spectra/spectra.h5'], '/w')';
     wb_comp = h5read([config.resultsdir, 'spectra/spectra.h5'], '/wb_comp');
     nnmf_psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/nnmf_psd');
     nnmf_psd = permute(nnmf_psd, [4,3,2,1]);
@@ -18,7 +18,7 @@ if useMT
   % permute state numbers
   if use_WB_nnmf
     fname = [fname, '_MT_nnmf'];
-    if exist([fname, '.mat'], 'file')
+    if 0%exist([fname, '.mat'], 'file')
       load(fname)
     else
       [~, new_state_ordering] = sort(mean(reshape(permute(nnmf_coh(:,:,1,:,:), [2,1,3,4,5]), 12,[]),2),'descend');
@@ -60,7 +60,8 @@ if useMT
   
   % now get the parcel/frequency averages for plotting
   powAvg_freq = nanmean(squeeze(sum(nanmean(static_pow,4),2)));
-  cohAvg_freq = nanmean(squeeze(sum(nanmean(static_coh(:,:,:,offdiagselect),4),2)));
+  cohAvg_freq = nanmean(squeeze(sum(static_coh,2)));
+  cohAvg_freq = nanmean(cohAvg_freq(:,:,offdiagselect),3); % breaking up in two lines helps with memory
   
   if use_WB_nnmf
     powAvg_topo = squeeze(nanmean(sum(static_pow_wb,2),1));
@@ -69,7 +70,7 @@ if useMT
     powAvg_topo = squeeze(nanmean(sum(nanmean(static_pow,3),2),1));
     cohAvg_topo = squeeze(nanmean(sum(nanmean(static_coh,3),2),1));
   end
-  
+  clear static_pow static_coh static_pow_wb static_coh_wb nnmf_coh nnmf_psd
 else
   if whichstudy==3
     % for HCP need to recompute run indices (each subject has multiple runs)
@@ -145,4 +146,6 @@ else
   
   powAvg_topo = squeeze(mean(mean(psd_wb,2)));
   cohAvg_topo = squeeze(mean(mean(coh_wb,2)));
+  
+  clear static_pow static_coh
 end
