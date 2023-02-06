@@ -1,4 +1,4 @@
-function ax = cyclicalstatesubplot(ordering,mean_direction,sigpoints,color_scheme)
+function ax = cyclicalstatesubplot(ordering,mean_direction,sigpoints,color_scheme, markersize)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -13,6 +13,10 @@ disttoplot_manual = zeros(12,2);
 for i=1:12
     temp = exp(sqrt(-1)*(i+2)/12*2*pi);
     disttoplot_manual(ordering(i),:) = [real(temp),imag(temp)];
+end
+
+if ~exist('markersize', 'var')
+    markersize = 400;
 end
 
 
@@ -44,7 +48,7 @@ for ik1=1:K
     end
 end
 tmpa = gca;
-msize = (0.5+tmpa.Position(3)/2)*400;
+msize = (0.5+tmpa.Position(3)/2)*markersize;
 for ik=1:K
     scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),msize,...
         'MarkerFaceColor',color_scheme{ik},'MarkerEdgeColor',color_scheme{ik}); 
