@@ -1,4 +1,8 @@
-function [pvals, stat] = FO_permutation_test(FO, K, nSj)
+function [pvals, stat] = FO_permutation_test(FO, K, nSj, numperm)
+
+if ~exist('numperm', 'var') || isempty(numperm)
+  numperm = 100000;
+end
 
 dat1=[];
 dat1.dimord = 'rpt_chan_time';
@@ -13,7 +17,7 @@ cfg.statistic = 'depsamplesT';
 cfg.design = [ones(1,nSj), 2*ones(1,nSj); 1:nSj, 1:nSj];
 cfg.ivar = 1;
 cfg.uvar = 2;
-cfg.numrandomization = 100000;
+cfg.numrandomization = numperm;
 cfg.tail = 0;
 cfg.correcttail = 'prob';
 pvals = zeros(K,K);
