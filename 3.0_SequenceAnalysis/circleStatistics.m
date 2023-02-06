@@ -90,7 +90,7 @@ if ~isfile(optimalseqfile)
 else
     load(optimalseqfile);
 end
-bestseq = bestsequencemetrics{2};
+bestseq = bestsequencemetrics{1};
 % save each subject's rotational strength by this metric:
 disttoplot_manual = zeros(12,1);
 for i3=1:12
