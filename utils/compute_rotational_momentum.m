@@ -1,4 +1,4 @@
-function [rotational_momentum, stat] = compute_rotational_momentum(angleplot, FO_assym, whichstate)
+function rotational_momentum = compute_rotational_momentum(angleplot, FO_assym, whichstate)
 tmp = angleplot.*FO_assym;
 nSj = size(FO_assym,3);
 if exist('whichstate','var') && ~isempty(whichstate)

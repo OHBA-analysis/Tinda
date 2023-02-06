@@ -10,9 +10,15 @@ metrics.mean_assym = squeeze(mean((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:)).
 metrics.FO_assym = squeeze((FO_intervals(:,:,1,:)-FO_intervals(:,:,2,:))./mean(FO_intervals,3));
 % also get measures for how well the fit is of subject with average pattern
 tmp = metrics.FO_assym;
-tmp = reshape(tmp, K*K, []);
 tmp(isnan(tmp))=0;
-metrics.FO_assym_subject_fit = corr(tmp, mean(tmp,2));
+for k=1:size(tmp,3)
+  metrics.FO_assym_subject_fit(k,1) = corr2(tmp(:,:,k), mean(tmp,3));
+  metrics.FO_assym_rv_coef(k,1) = rv_coefficient(tmp(:,:,k), mean(tmp,3));
+end
+
+tmp = squeeze(mean((FO_intervals(:,:,1,:)./FO_intervals(:,:,2,:)),4));
+metrics.P = tmp./nansum(tmp,2); % transition probability based on asymmetries
+
 
 
 % Rotational momentum is the rotational strength of the unthresholded FO
@@ -48,7 +54,7 @@ if ~isempty(bestseq)
   metrics.circularity_pval = circle_pval;
   if doplot
     set_font(10, {'title', 'label'})
-    save_figure([config.figdir,'figure_supp_tinda_metrics/', '2supp_CyclicalpatternVsPermutations']);
+    save_figure([config.figdir,'figure_supp_tinda_metrics/', '2supp_CyclicalpatternVsPermutations'],[],false);
   end
   
   % get the measure per subject
