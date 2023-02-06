@@ -1,7 +1,7 @@
 % this script fits a second level sequential HMM to an already inferred
 % viterbi path sequence
 if ~exist('whichstudy','var')
-  whichstudy = 5; % 1 denotes the hmm model run in Higgins2020_neuron
+  whichstudy = 1; % 1 denotes the hmm model run in Higgins2020_neuron
 end
 config = getStudyDetails(whichstudy);
 % other preliminary setup for plotting etc:
@@ -166,10 +166,10 @@ for iSj=1:config.nSj
   end
   T_poiss(T_poiss==0)=[];
   if whichstudy==4
-    if ~isfolder([config.figdir,'Poissdata_',int2str(W),overlapstring]) % originally config.hmmdir
-      mkdir([config.figdir,'Poissdata_',int2str(W),overlapstring]);
+    if ~isfolder([config.resultsdir,'Poissdata_',int2str(W),overlapstring]) % originally config.hmmdir
+      mkdir([config.resultsdir,'Poissdata_',int2str(W),overlapstring]);
     end
-    mat_files_poiss{iSj} = [config.figdir,'Poissdata_',int2str(W),overlapstring,'/PoissDataSj',int2str(iSj)]; % originally config.hmmdir
+    mat_files_poiss{iSj} = [config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/PoissDataSj',int2str(iSj)]; % originally config.hmmdir
     X = X_poiss;
     T = T_poiss;
     if exist(mat_files_poiss{iSj})
@@ -184,18 +184,19 @@ for iSj=1:config.nSj
     
     if exist(mat_files_poiss{iSj})
       %error('careful - about to overwrite files containing STC info!')
+    else
+      save(mat_files_poiss{iSj},'X','T');
     end
-    save(mat_files_poiss{iSj},'X','T');
   end
 end
 
 
-if whichstudy==4
-  save([config.figdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');% originally config.hmmdir
-elseif whichstudy==5
-  mkdir([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring])
-  save([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
-end
+% if whichstudy==4
+%   save([config.figdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');% originally config.hmmdir
+% elseif whichstudy==5
+%   mkdir([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring])
+%   save([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
+% end
 
 % % optionally for large datasets save to individual files:
 % n_runs = 10;
@@ -329,7 +330,11 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
           options.hmm.state(k).W.W_rate = LR*options.hmm.state(k).W.W_rate + (1-LR)*hmmtemp.state(k).W.W_rate;
         end
         options.hmm.Pi = LR*options.hmm.Pi + (1-LR)*hmmtemp.Pi;
-%         options.hmm.Pe = LR*options.hmm.Pe + (1-LR)*hmmtemp.Pe;
+        try
+          options.hmm.Pe = LR*options.hmm.Pe + (1-LR)*hmmtemp.Pe;
+        catch
+          options.hmm.Pe = [];
+        end
         options.hmm.P = LR*options.hmm.P + (1-LR)*hmmtemp.P;
         options.hmm.Dir_alpha = LR*options.hmm.Dir_alpha + (1-LR)*hmmtemp.Dir_alpha;
         options.hmm.Dir2d_alpha = LR*options.hmm.Dir2d_alpha + (1-LR)*hmmtemp.Dir2d_alpha;
@@ -346,7 +351,7 @@ if whichstudy<4
   hmmPoiss.gamma = GammaPoiss;
   disttoplot = plotMDS_states(hmmPoiss);
   
-  save([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+  save([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
   % [~,new_state_orderingPoiss] = sort(disttoplot(:,1));
   % hmmPoiss = hmm_permutestates(hmmPoiss,new_state_orderingPoiss);
   % GammaPoiss = hmmPoiss.gamma;
@@ -362,7 +367,7 @@ if whichstudy<4
   subplot(3,1,3);
   plot(min(gamsum,[],2),'*');
   plot4paper('Init run','Min Gamma');
-  %     print([config.figdir,'Fig0_ConvergenceRecord_window',int2str(iW)],'-dpng');
+  print([config.figdir,'figure_2ndlevel_hmm/', 'ConvergenceRecord_window',int2str(W)],'-dpng');
 else
   if whichstudy==4
     if isfield(options.hmm, 'Gamma')
@@ -379,9 +384,9 @@ else
     options.useParallel = false;
     options.standardise = false;
     if whichstudy==5
-      load([replace(config.figdir, 'Study5', 'Study3'),'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+      load([replace(config.resultsdir, 'Study5', 'Study3'),'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
     else
-      load([config.figdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
+      load([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
     end
     end
   % and infer each subject's associated state timecourse:
@@ -403,7 +408,7 @@ else
   end
   hmmPoiss.gamma = GammaPoiss;
 if whichstudy==4
-  save([config.figdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss', 'GammaPoiss','T_poiss','Poiss_subj_inds');
+  save([config.resultsdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss', 'GammaPoiss','T_poiss','Poiss_subj_inds');
 end
 end
 
@@ -507,7 +512,7 @@ if whichstudy~=4
     %         end
   end
 else
-  load([config.hmmfolder,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','GammaPoiss','T_poiss','Poiss_subj_inds');
+  load([config.resultsdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','GammaPoiss','T_poiss','Poiss_subj_inds');
    
   if ~contains(config.Poiss_dir,'overlappingWindows')
     figdir = [config.figdir,'4_covariates_W',int2str(W),'/'];
@@ -598,9 +603,9 @@ elseif whichstudy==5
 end
 
 % save metrics for later analysis:
-config.metricfile = [config.figdir, 'HMMsummarymetrics.mat'];
+config.metricfile = [config.resultsdir, 'HMMsummarymetrics.mat'];
 if isfile(config.metricfile)
-  save(config.metricfile,'hmm_2ndlevel','-append', '-v7.3');
+  save(config.metricfile,'hmm_2ndlevel','-append');
 else
   save(config.metricfile,'hmm_2ndlevel', '-v7.3')
 end
