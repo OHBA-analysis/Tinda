@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm, replayidx)
+function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm, replayidx, numperm)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -17,6 +17,10 @@ end
 if ~iscell(vpath) || ~iscell(T)
   error('vpath and T should be cells, with one entry per subject');
 end
+if ~exist('numperm', 'var') || isempty(numperm)
+  numperm = 10^5;
+end
+
 nSj = length(vpath);
 FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
 FO_all = [];
@@ -34,10 +38,10 @@ for iSj=1:nSj
       for ik=1:K
         v(:,ik) = vpath{iSj}==ik;
       end
-      v_mean = zeros(251, length(replayidx),K);
+      v_mean = zeros(251, length(replayidx{iSj}),K);
       rem=[];
-      for k=1:length(replayidx)
-        ix = replayidx(k);
+      for k=1:length(replayidx{iSj})
+        ix = replayidx{iSj}(k);
         try
           v_mean(:, k,:) = v(ix-125:ix+125,:);
         catch
@@ -46,15 +50,15 @@ for iSj=1:nSj
       end
       v_mean(:, rem,:) = [];
       v_mean = squeeze(mean(v_mean,2));
-      replayidx(rem)=[];
+      replayidx{iSj}(rem)=[];
       v_demean = v;
-      for k=1:length(replayidx)
-        ix = replayidx(k);
+      for k=1:length(replayidx{iSj})
+        ix = replayidx{iSj}(k);
         v_demean(ix-125:ix+125,:) = v(ix-125:ix+125,:)-v_mean;
       end
       
       
-    else
+    else % this will be used when we have a trial x time matrix.
       % get the demeaned vpath data to use in the GLM later
       v=zeros(length(vpath{iSj}), K);
       for ik=1:K
@@ -157,10 +161,10 @@ if nSj>1
   for ip=1:length(intervalpercentiles)-1
     % do permutation test of FO
     
-    [pvals(:,:,ip), stat{ip}] = FO_permutation_test(FO(:,:,:,:,ip), K, nSj);
+    [pvals(:,:,ip), stat{ip}] = FO_permutation_test(FO(:,:,:,:,ip), K, nSj, numperm);
     
     if dotaskglm
-      [pvals_residual(:,:,ip), stat_res{ip}] = FO_permutation_test(FO_residual(:,:,:,:,ip), K, nSj);
+      [pvals_residual(:,:,ip), stat_res{ip}] = FO_permutation_test(FO_residual(:,:,:,:,ip), K, nSj, numperm);
     end
   end
   if length(stat)==1
