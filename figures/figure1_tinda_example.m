@@ -7,7 +7,7 @@ if whichstudy==1
     whichstate=2;
   end
   fprintf(['\n Subject: ',int2str(iSj), ', State: ' int2str(whichstate)]);
-  
+  sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
   % load raw data
   D = spm_eeg_load(replace(hmm.data_files{iSj}, '/Users/chiggins/data/YunzheData/Replaydata4Cam/WooliePipeline/spm/', '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/'));
   
@@ -240,3 +240,12 @@ if whichstudy==1
   save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_example_state',int2str(whichstate)]);
   %   close
 end
+
+
+% create individual plot for DMN asym
+study = {'MEGUK', 'MEGUK', 'HCP', 'CAMCAN'};
+fig = setup_figure([], 1,1)
+cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,find(bestseq==1),false, color_scheme);
+title({study{whichstudy}, 'DMN', ''})
+set_font(10, {'label', 'title'})
+save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_DMN']);
