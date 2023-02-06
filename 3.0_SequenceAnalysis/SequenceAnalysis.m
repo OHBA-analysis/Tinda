@@ -66,9 +66,9 @@ elseif whichstudy==3
   end
   hmm.subj_inds = ceil(hmm.subj_inds/3); % account for multiple runs per subj
   hmmTold = reshape(hmmT,3,config.nSj);
-  hmmTsubj = cell(config.nSj);
+  hmmTsubj = cell(config.nSj,1);
   for i=1:config.nSj
-    hmmTsubj{i} = [hmmTold{1,i},hmmTold{2,i},hmmTold{3,i}]-(length(hmm.train.embeddedlags)-1);
+    hmmTsubj{i,:} = [hmmTold{1,i},hmmTold{2,i},hmmTold{3,i}]-(length(hmm.train.embeddedlags)-1);
   end
   hmmT = hmmTsubj;
   clear hmmTsubj hmmTold;
@@ -111,7 +111,11 @@ for subnum=1:config.nSj
     vpath{subnum} = hmm.statepath(hmm.subj_inds==subnum);
   else
     temp = load(mat_files_orth{subnum},'vpath');
-    vpath{subnum} = temp.vpath;
+    vpath_old = temp.vpath;
+    vpath{subnum} = zeros(size(vpath_old));
+    for k=1:K
+      vpath{subnum}(vpath_old==new_state_ordering(k)) = k;
+    end
   end
   if simtests
     try % note unusual syntax here is just to catch very rare precision errors in numeric simulation
@@ -149,10 +153,12 @@ fname = [config.resultsdir, 'coherence_state_ordering'];
 loadHMMspectra_MT
 
 % prepare sepctra and topos
+tmp1 = nanmean(psd,4);
+C = coh(:,:,:,offdiagselect);
+C = nanmean(C,4);
 for whichstate = 1:K
-  pow_state_freq{whichstate} = (squeeze(nanmean((psd(:,whichstate,:,:)),4)));
-  C = coh(:,:,:,offdiagselect);
-  coh_state_freq{whichstate} = (squeeze(nanmean(C(:,whichstate,:,:),4)));
+  pow_state_freq{whichstate} = squeeze(tmp1(:,whichstate,:));
+  coh_state_freq{whichstate} = squeeze(C(:,whichstate,:));
   if use_WB_nnmf
     pow_state_topo{whichstate} = squeeze(nanmean((psd_wb(:,whichstate,:)),1));
     coh_state_topo{whichstate} = squeeze(mean(coh_wb(:,whichstate,:,:),1));
@@ -161,27 +167,39 @@ for whichstate = 1:K
     coh_state_topo{whichstate} = squeeze(mean(mean(coh(:,whichstate,:,:,:),3),1));
   end
 end
+clear C tmp1
 
 %% Compute long term assymetry:
-
 [FO_intervals,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
+
 hmm_1stlevel.FO_intervals = FO_intervals;
-hmm_1stlevel.FO_stat = FO_stat;
-hmm_1stlevel.FO_pvals = FO_pvals;
+hmm_1stlevel.assym_permtest = FO_stat;
+hmm_1stlevel.assym_permtest.pvals = FO_pvals;
+a=[];
+for i=1:K
+  for j=1:K
+    [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(FO_intervals(i,j,1,:)), squeeze(FO_intervals(i,j,2,:)));
+  end
+end
+hmm_1stlevel.assym_ttest = a;
 
 % correcting for the number of tests. Correcting for the two tails in the 
 % FO_assym is done inside the permutation test (FO_permutation_test)
 bonf_ncomparisons = (K.^2-K); 
-alpha_thresh = 0.05;
-if whichstudy==4
-  alpha_thresh = 0.0000001 * alpha_thresh;
+alpha_thresh = (0.05/bonf_ncomparisons);
+hmm_1stlevel.assym_permtest.alpha_thresh = alpha_thresh;
+hmm_1stlevel.assym_permtest.sigpoints = hmm_1stlevel.assym_permtest.pvals<alpha_thresh;
+if whichstudy==3
+  alpha_thresh = 0.1*alpha_thresh;
+elseif whichstudy==4
+  alpha_thresh = 0.000000001 * alpha_thresh;
 end
-alpha_thresh = (alpha_thresh/bonf_ncomparisons);
-sigpoints = FO_pvals<alpha_thresh;
+hmm_1stlevel.assym_ttest.alpha_thresh = alpha_thresh;
+hmm_1stlevel.assym_ttest.sigpoints = hmm_1stlevel.assym_ttest.pvals<alpha_thresh;
 
 
 % Run TINDA on the group level.
-[FO_group,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{squash(cat(1,hmmT{:}))},K);
+[FO_group,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{squash(cat(2,hmmT{:}))},K);
 hmm_1stlevel.FO_intervals_group = FO_group;
 
 %% Find the optimial ordering
@@ -199,7 +217,7 @@ if ~isfile(optimalseqfile)
 else
   load(optimalseqfile);
 end
-bestseq = bestsequencemetrics{2};
+bestseq = bestsequencemetrics{1};
 
 if strcmp(config.reordering_states, 'replay') && whichstudy<3
   % put the lowest coherence state at 12 o'clock
@@ -209,7 +227,69 @@ angleplot = circle_angles(bestseq);
 
 %% Compute TINDA metrics
 
-hmm_1stlevel.cycle_metrics = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals, sigpoints, color_scheme);
+hmm_1stlevel.cycle_metrics = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
+
+
+% compute cycle_metrics per session
+if whichstudy==3
+  for iSes=1:3
+    for iSj=1:config.nSj
+      tmp = cumsum(hmmT{iSj});
+      vpath_ses{iSj, iSes} = vpath{iSj}(1+tmp(iSes)-hmmT{iSj}(iSes) : tmp(iSes));
+      hmmT_ses{iSj, iSes} = hmmT{iSj}(iSes);
+    end
+    a=[];
+    [a.FO_intervals,a.assym_permtest.FO_pvals,a.t_intervals,a.assym_permtest.FO_stat] = computeLongTermAsymmetry(vpath_ses(:, iSes),hmmT_ses(:,iSes),K);
+    
+    hmm_1stlevel.tinda_per_ses{iSes} = a;
+    b=[];
+    for i=1:K
+      for j=1:K
+        [b.h(i,j), b.pvals(i,j), b.ci(i,j,:), b.stat(i,j)] = ttest(squeeze(a.FO_intervals(i,j,1,:)), squeeze(a.FO_intervals(i,j,2,:)));
+      end
+    end
+    hmm_1stlevel.tinda_per_ses{iSes}.assym_ttest = b;
+    hmm_1stlevel.tinda_per_ses{iSes}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, a.FO_intervals, b.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme);
+  end
+end
+
+
+
+%% Run TINDA on permuted state labels
+rng(42);
+nperm = 100;
+for iperm=1:nperm
+  iperm
+  for k=1:length(vpath)
+    vpath_perm{k} = zeros(size(vpath{k}));
+    perm_ordering = randperm(K);
+    for i=1:K
+      vpath_perm{k}(vpath{k}==i)=perm_ordering(i);
+    end
+  end
+  [FO_intervals_perm{iperm},FO_pvals_perm{iperm},~,FO_stat_perm{iperm}] = computeLongTermAsymmetry(vpath_perm,hmmT,K);
+  bestsequencemetrics_perm{iperm} = optimiseSequentialPattern(FO_intervals_perm{iperm});
+  angleplot_perm = circle_angles(bestsequencemetrics_perm{iperm}{2});
+  FO_assym_perm = squeeze((FO_intervals_perm{iperm}(:,:,1,:)-FO_intervals_perm{iperm}(:,:,2,:))./mean(FO_intervals_perm{iperm},3));
+  [rotational_momentum_perm(iperm,:), ~] = compute_rotational_momentum(angleplot_perm, FO_assym_perm);
+end
+
+hmm_1stlevel.perm = [];
+hmm_1stlevel.perm.FO_intervals = FO_intervals_perm;
+hmm_1stlevel.perm.assym_permtest.pvals = FO_pvals_perm;
+hmm_1stlevel.perm.assym_permtest.stat = FO_stat_perm;
+for k=1:100
+a=[];
+for i=1:K
+  for j=1:K
+    [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(hmm_1stlevel.perm.FO_intervals{k}(i,j,1,:)), squeeze(hmm_1stlevel.perm.FO_intervals{k}(i,j,2,:)));
+  end
+end
+hmm_1stlevel.perm.assym_ttest{k} = a;
+end
+hmm_1stlevel.perm.bestsequencemetrics = bestsequencemetrics_perm;
+hmm_1stlevel.perm.rotational_momentum = rotational_momentum_perm;
+hmm_1stlevel.perm.obs_vs_perm = max([1./(nperm+1), sum(mean(rotational_momentum_perm,2)<mean(hmm_1stlevel.cycle_metrics.rotational_momentum))]);
 
 
 %% Run TINDA on the vpath simulated from the transprob matrix.
@@ -242,18 +322,18 @@ figure2_circleplot
 figure_supp_tinda_metrics
 
 
-
-%% Figure 2 supplement:  analyse by quintiles
-figure_supp_tinda_quintiles
-
-
-%% Figure Supplement 2: analyse by intervals >2 heartbeats long
-figure_supp_tinda_heartbeat
-
-
-%% Figure 2 supplement: analyse intervals <half a respiratory cycle
-figure_supp_tinda_respiration
-
+if whichstudy==1
+  %% Figure 2 supplement:  analyse by quintiles
+  figure_supp_tinda_quintiles
+  
+  
+  %% Figure Supplement 2: analyse by intervals >2 heartbeats long
+  figure_supp_tinda_heartbeat
+  
+  
+  %% Figure 2 supplement: analyse intervals <half a respiratory cycle
+  figure_supp_tinda_respiration
+end
 
 %% save metrics
 if exist([config.resultsdir, 'HMMsummarymetrics'])
