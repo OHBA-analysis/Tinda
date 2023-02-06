@@ -4,7 +4,7 @@ diffmode = {'rel'}; % whether to plot psd/coh relative to average over states
 use_sqrt_f = [true];%[true, false] ; % whether to plot PSD/coh with sqrt of f axis
 statecolor = [true, false]; % whether to plot PSD/coh in the state color
 parc = config.parc;
-mni_coords = parc.template_coordinates;
+mni_coords =  config.parc.roi_centers;
 clear yl tmp*
 for whichtopo = 1:2%3
   do_pow_or_coh = {'pow','coh'};% 'both'
@@ -143,13 +143,13 @@ for whichtopo = 1:2%3
           plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
 
           ax(k,3) = axes('Position', [0.01 -0.015 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.08 0.08]);
-          [~, ax(k,3), ~] = plot_coh_topo(ax(k,3), mni_coords, graph, cohAvg_topo, [0 3], [], 95);  axis off      
+          [~, ax(k,3), ~] = plot_coh_topo(ax(k,3), mni_coords, graph, cohAvg_topo, [0 3], [], th);  axis off      
         elseif strcmp(do_pow_or_coh, 'pow')
           ax(k,1) = axes('Position', [0 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]);
           plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
         elseif  strcmp(do_pow_or_coh, 'coh')
           ax(k,1) = axes('Position', [0.01 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.08 0.08]);
-          [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], 95);axis off
+          [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], th);axis off
         end
         colormap(hotcold)
       end
