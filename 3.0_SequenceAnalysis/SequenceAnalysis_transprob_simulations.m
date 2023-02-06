@@ -7,12 +7,26 @@ for iperm=1:n_sim_perm
   for k=1:length(vpath)
     simulation_vpath{k} = simulateVpath(vpath{k},hmmT{k},K);
   end
-  [simulation{iperm}.FO_intervals,simulation{iperm}.FO_pvals,simulation{iperm}.t_intervals, simulation{iperm}.FO_stat] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
-  if iperm<=100
+  [simulation{iperm}.FO_intervals,FO_pvals,~, FO_stat] = computeLongTermAsymmetry(simulation_vpath,hmmT,K);
+  simulation{iperm}.assym_permtest = [];
+  simulation{iperm}.assym_permtest.stat = FO_stat;
+  simulation{iperm}.assym_permtest.pvals = FO_pvals;
+  simulation{iperm}.assym_ttest=[];
+  K=12;
+  a=[];
+  for i=1:K
+    for j=1:K
+      [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(simulation{iperm}.FO_intervals(i,j,1,:)), squeeze(simulation{iperm}.FO_intervals(i,j,2,:)));
+    end
+  end
+  simulation{iperm}.assym_ttest = a;
+  
+  
+  if iperm==1
     simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
-    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{2}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
+    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{1}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
   else
-        simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.FO_pvals<alpha_thresh, color_scheme, false);
+    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
   end
 end
 hmm_1stlevel.simulation = simulation;
@@ -25,9 +39,21 @@ for k=1:n_sim_perm
   simulation_average.FO_intervals(:,:,:,:,k) = simulation{k}.FO_intervals;
 end
 simulation_average.FO_intervals = mean(simulation_average.FO_intervals,5);
-[simulation_average.FO_pvals, simulation_average.FO_stat] = FO_permutation_test(simulation_average.FO_intervals, K, config.nSj);
+[FO_pvals, FO_stat] = FO_permutation_test(simulation_average.FO_intervals, K, config.nSj);
+simulation_average.assym_permtest = [];
+simulation_average.assym_permtest.stat = FO_stat;
+simulation_average.assym_permtest.pvals = FO_pvals;
+simulation_average.assym_ttest=[];
+K=12;
+a=[];
+for i=1:K
+for j=1:K
+[a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(simulation_average.FO_intervals(i,j,1,:)), squeeze(simulation_average.FO_intervals(i,j,2,:)));
+end
+end
+simulation_average.assym_ttest = a;
 simulation_average.bestsequencemetrics = optimiseSequentialPattern(simulation_average.FO_intervals);
-simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_average.bestsequencemetrics{2}, angleplot, simulation_average.FO_intervals, simulation_average.FO_pvals<alpha_thresh, color_scheme, false);
+simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_average.bestsequencemetrics{1}, angleplot, simulation_average.FO_intervals, simulation_average.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
 
 % compare the observed circularity with the simulated one
 % dat1=[];
@@ -59,7 +85,7 @@ hmm_1stlevel.simulation_average = simulation_average;
 % we can either simulate the vpath based on the group level transprob, or
 % the individual vpath
 % let's do the group:
-nsim=1000;
+nsim=100;
 for sim=1:nsim
   sim
   clear hmmT_sim vpath_sim
@@ -98,10 +124,11 @@ dat1=[];
 dat1.dimord = 'rpt_chan_time';
 dat1.label{1} = 'metric';
 
-measures = {'FO_assym_subject_fit', 'TIDA', 'rotational_momentum', 'circularity_subject', 'TIDA_perstate', 'rotational_momentum_perstate'};
+measures = {'FO_assym_rv_coef', 'FO_assym_subject_fit', 'TIDA', 'rotational_momentum', 'circularity_subject', 'TIDA_perstate', 'rotational_momentum_perstate'};
 for im = measures
   m = im{1};
-  if strcmp(m, 'FO_assym_subject_fit') || strcmp(m, 'TIDA') ||... 
+  if strcmp(m ,'FO_assym_rv_coef') || ...
+      strcmp(m, 'FO_assym_subject_fit') || strcmp(m, 'TIDA') ||... 
       strcmp(m, 'TIDA_perstate') || strcmp(m, 'circularity') % these are all positive numbers
     cfg.tail = 1;
   else
