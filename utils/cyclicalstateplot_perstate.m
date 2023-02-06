@@ -7,20 +7,20 @@ end
 K = length(ordering);
 if ~exist('plotstates', 'var') || isempty(plotstates)
   plotstates=1:K;
-  row=3; col=4;
+  row=2; col=6;
 end
-if exist('newfigure','var') && newfigure==true || ~exist('newfigure','var') 
+if exist('newfigure','var') && newfigure==true || ~exist('newfigure','var')
   if length(plotstates)>1
     setup_figure([],2,1);
   else
     figure('Position',[440 501 402 297]);
   end
 else
- axes(gca);
+  axes(gca);
 end
 
 if nargin<6
-    color_scheme = set1_cols;
+  color_scheme = set1_cols;
 end
 disttoplot_manual = zeros(12,2);
 for i=1:12
@@ -34,7 +34,7 @@ for k_to_plot = plotstates
   if length(plotstates)>1
     subplot(row,col,k_to_plot);
   end
-  for ik1=ordering(k_to_plot)
+  for ik1=(k_to_plot)
     for k2=1:K
       if sigpoints(ik1,k2)
         linescale = sqrt(sum((disttoplot_manual(k2,:)-disttoplot_manual(ik1,:)).^2));
@@ -62,7 +62,7 @@ for k_to_plot = plotstates
   % do it once more for state k in the columns (switch around the arrow
   % colors)
   for ik1=1:K
-    for k2=ordering(k_to_plot)
+    for k2=(k_to_plot)
       if sigpoints(ik1,k2)
         linescale = sqrt(sum((disttoplot_manual(k2,:)-disttoplot_manual(ik1,:)).^2));
         if linescale>1.42 % ie line is four or more steps
@@ -85,19 +85,22 @@ for k_to_plot = plotstates
       end
     end
   end
-
+  
   % plot the circles with numbers
+  tmpa=gca;
+  msize = (0.5+tmpa.Position(3)/2)*400;
   for ik=1:K
     docolor=1;
     if docolor, edgecol = color_scheme{ik}; facecol = edgecol; else, edgecol = [0 0 0]; facecol = [1 1 1]; end
-    scatter1(ik) = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
+    scatter1(ik) = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),msize,...
       'MarkerFaceColor', facecol,'MarkerEdgeColor', edgecol);
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1(ik).MarkerFaceAlpha = 1;%.75;
     t = text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str((ik)),'FontSize',12,'FontWeight','bold', 'HorizontalAlignment', 'center', 'Visible', 'On', 'FontName', 'Calibri');
-end
+  end
   axis square
   axis off
+  title({sprintf('State %d',k_to_plot), ''})
 end
 end
