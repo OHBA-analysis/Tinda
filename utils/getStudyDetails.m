@@ -43,7 +43,7 @@ elseif whichstudy==3
   config.participantcovariates = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/';
   config.parc = parcellation('aal_cortical_merged_8mm_stacked.nii.gz');
   config.fmri_metastates = '/ohba/pi/mwoolrich/mvanes/analysis/HCP/Diegov/';
-  config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+  config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
   % note the parcellation needs to be reordered so labels match data:
   %     reordering = readtable('/Users/chiggins/Documents/MATLAB/rs-mvar-scripts/aal_cortical_details.csv');
   %     reordering = table2array(reordering(:,5))+1; % the +1 converts from python 0 indexing
@@ -61,11 +61,7 @@ elseif whichstudy==3
   config.reordering_states = 'coherence'; %
   
 elseif whichstudy==4 % this the CamCan model fit:
-  if isfolder('/Volumes/T5_OHBA/')
-    basedir='/Volumes/T5_OHBA/Projects/Tinda';
-  else
     basedir='/ohba/pi/mwoolrich/datasets/CamCan_2021';
-  end
   config.nSj = 600;
   config.hmmfolder = fullfile(basedir, 'HMM/');
   config.hmmfilename = 'hmm_analysis1.mat';
@@ -77,9 +73,8 @@ elseif whichstudy==4 % this the CamCan model fit:
   config.participantfile = fullfile(basedir, 'ParticipantCovariates/participants.tsv');
   config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
   config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
-  config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'coherence'; % can be 'replay' (originally)
-  
+  config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
+  config.reordering_states = 'coherence'; 
 elseif whichstudy==5
   config.nSj = 237/3;
   config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
@@ -91,7 +86,7 @@ elseif whichstudy==5
   config.storymdir = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/';
   config.storymfilelist = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study5/ve_output_StoryM_matfiles/filelist.mat';
   config.sample_rate=240;
-  config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+  config.metricfile = [config.resultsdir, 'HMMsummarymetrics'];%[config.hmmfolder,'HMMsummarymetrics.mat'];
   config.reordering_states = 'coherence'; % can be 'replay' (originally)
   
 end
