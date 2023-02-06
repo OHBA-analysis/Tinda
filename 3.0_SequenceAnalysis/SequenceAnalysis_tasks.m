@@ -3,41 +3,30 @@
 % do the sequential patterns found for the HCP resting state data replicate
 % to the inferred task structure?
 
-clear all;
 whichstudy = 5; % this flags the HCP task data
 config = getStudyDetails(whichstudy);
 
 % other preliminary setup for plotting etc:
-color_scheme = set1_cols();
+color_scheme = colorscheme(whichstudy);
+hotcold = cmap_hotcold;
 
-%% Extract baseline RSN activity from resting state scans:
+%% load baseline RSN activity from resting state scans:
 
-load(fullfile(config.hmmfolder,config.hmmfilename),'hmm','T_all','Gamma');
-
-% get each subject's baseline FO from resting state:
-t0 = 0;
-FO_sj = zeros(length(T_all),12);
-for iSj=1:length(T_all)
-    tsj= sum(T_all{iSj}-14);
-    FO_sj(iSj,:) = mean(Gamma((t0+1):(t0+tsj),:));
-    t0 = t0 + tsj;
-end
-FO_sj = squeeze(mean(reshape(FO_sj,[3,config.nSj,12])));
-
-% also load in the best sequence and angleplot
-optimalseqfile = [config.hmmfolder,'bestseq',int2str(3),'.mat'];
-load(optimalseqfile);
-bestseq = bestsequencemetrics{2};
+rsn = load(replace(config.metricfile, 'Study5', 'Study3'));
+rsn.bestseq = load([replace(config.resultsdir, 'Study5', 'Study3'), 'bestseq3_coherence']);
+rsn.bestseq = rsn.bestseq.bestsequencemetrics{1};
+rsn.new_state_ordering = load([replace(config.resultsdir, 'Study5', 'Study3'), 'coherence_state_ordering_MT_nnmf']);
+rsn.new_state_ordering = rsn.new_state_ordering.new_state_ordering;
 
 % save each subject's rotational strength by this metric:
 disttoplot_manual = zeros(12,1);
 for i3=1:12
-    disttoplot_manual(bestseq(i3)) = exp(sqrt(-1)*i3/12*2*pi);
+    disttoplot_manual(rsn.bestseq(i3)) = exp(sqrt(-1)*i3/12*2*pi);
 end
-angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
-
+rsn.angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
 
 %% Task 1: Working memory evoked response:
+FO_sj = rsn.hmm_1stlevel.FO;
 hmm_1stlevel=[];
 
 % extract file structure:
@@ -178,78 +167,38 @@ print([config.figdir,'FigA_WrkMemEvokedResponse'],'-dpng');
 %% and check for cyclical patterns:
 % as well as the original Tinda analysis, run it in GLM form after
 % subtracting the evoked responde from the task vpath.
-%% and check for cyclical patterns:
-% as well as the original Tinda analysis, run it in GLM form after
-% subtracting the evoked responde from the task vpath.
-[FO_task,pvals_task,~,FO_task_residual, pvals_task_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,hmm.K,[],1);
-sigpoints = pvals_task<(0.05/bonf_ncomparisons);
+K=12;
+bonf_ncomparisons = (K.^2-K); 
+alpha_thresh = 0.05;
+alpha_thresh = (alpha_thresh/bonf_ncomparisons);
 
-mean_direction = squeeze(nanmean(FO_task(:,:,1,:)-FO_task(:,:,2,:),4));
-mean_assym_raw = squeeze(mean((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3),4));
+[FO_intervals,FO_pvals,t_intervals,FO_stat, FO_residual,pvals_residual, stat_residual] = computeLongTermAsymmetry(vpath_task,T_all_task,K,[],1);
 
-hmm_1stlevel.WrkMem.raw.FO_intervals = nan(12,12,2,79);
-hmm_1stlevel.WrkMem.raw.FO_intervals(:,:,:,hastaskdata) = FO_task;
-hmm_1stlevel.WrkMem.raw.FO_assym = nan(12,12,79);
-hmm_1stlevel.WrkMem.raw.FO_assym(:,:,hastaskdata) = squeeze((FO_task(:,:,1,:)-FO_task(:,:,2,:))./mean(FO_task,3));
+hmm_1stlevel.WrkMem.FO_intervals = FO_intervals;
+hmm_1stlevel.WrkMem.FO_stat = FO_stat;
+hmm_1stlevel.WrkMem.FO_pvals = FO_pvals;
+sigpoints = FO_pvals<alpha_thresh;
+hmm_1stlevel.WrkMem.cycle_metrics = compute_tinda_metrics(config, [], rsn.angleplot, FO_intervals, sigpoints, color_scheme);
 
-rotational_momentum = imag(nansum(nansum(angleplot.*hmm_1stlevel.WrkMem.raw.FO_assym)));
-hmm_1stlevel.WrkMem.raw.rotational_momentum = squeeze(rotational_momentum);
+hmm_1stlevel.WrkMem.residual.FO_intervals = FO_residual;
+hmm_1stlevel.WrkMem.residual.FO_stat = stat_residual;
+hmm_1stlevel.WrkMem.residual.FO_pvals = pvals_residual;
+sigpoints_residual = pvals_residual<alpha_thresh;
+hmm_1stlevel.WrkMem.residual.cycle_metrics = compute_tinda_metrics(config, [], rsn.angleplot, FO_residual, sigpoints_residual, color_scheme);
 
-cyclicalstateplot(bestseq,mean_direction,sigpoints);
-gcf()
-print([config.figdir,'FigB_WrkMemSequencePlot_raw'],'-dpng');
-[circularity_raw, circle_pval_raw, ~, ~, fig] = geometric_circularity(mean_direction(bestseq, bestseq), sigpoints(bestseq, bestseq));
-hmm_1stlevel.WrkMem.raw.circularity = circularity_raw;
-hmm_1stlevel.WrkMem.raw.pval = circle_pval_raw;
-gcf;
-print([config.figdir,'FigBsupp_WrkMemCircularity_raw'],'-dpng');
 
-% get the metrics for the GLM residuals (i.e. accounting for evoked vpath)
-sigpoints_residual = pvals_task_residual<(0.05/bonf_ncomparisons);
-mean_direction_residual = squeeze(nanmean(FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:),4));
-mean_assym_raw = squeeze(mean((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3),4));
+cyclicalstateplot(rsn.bestseq,hmm_1stlevel.WrkMem.cycle_metrics.mean_direction,sigpoints);
+title({sprintf('M = %0.3f', mean(hmm_1stlevel.WrkMem.cycle_metrics.rotational_momentum)./hmm_1stlevel.WrkMem.cycle_metrics.max_theoretical_rotational_momentum), ''})
 
-hmm_1stlevel.WrkMem.FO_intervals = nan(12,12,2,79);
-hmm_1stlevel.WrkMem.FO_intervals(:,:,:,hastaskdata) = FO_task_residual;
-hmm_1stlevel.WrkMem.FO_assym = nan(12,12,79);
-hmm_1stlevel.WrkMem.FO_assym(:,:,hastaskdata) = squeeze((FO_task_residual(:,:,1,:)-FO_task_residual(:,:,2,:))./mean(FO_task_residual,3));
-
-rotational_momentum_residual = imag(nansum(nansum(angleplot.*hmm_1stlevel.WrkMem.FO_assym)));
-hmm_1stlevel.WrkMem.rotational_momentum = squeeze(rotational_momentum_residual);
-
-cyclicalstateplot(bestseq,mean_direction_residual,pvals_task_residual<(0.05/bonf_ncomparisons));
-gcf()
-print([config.figdir,'FigB_WrkMemSequencePlot'],'-dpng');
-[circularity, circle_pval, ~, ~, fig] = geometric_circularity(mean_direction_residual(bestseq, bestseq), sigpoints_residual(bestseq, bestseq));
-hmm_1stlevel.WrkMem.circularity = circularity;
-hmm_1stlevel.WrkMem.pval = circle_pval;
-gcf;
-print([config.figdir,'FigBsupp_WrkMemCircularity'],'-dpng');
 
 % save metrics for later analysis:
-savedir = [config.figdir, 'HMMsummarymetrics.mat'];
+savedir = config.metricfile;
 if exist(config.metricfile)
     save(savedir,'hmm_1stlevel','-append');
 else
     save(savedir,'hmm_1stlevel')
 end
 
-
-% for i=1:length(vpath_evoked)
-%     vpathcircle{i}= getCircleVpath(vpath_evoked{i}, bestseq);
-%     
-%     vpathcircle_task_long{i} = getCircleVpath(vpath_task_long{i}, bestseq);
-%     
-%     % do Fourier analysis on the circle vpath and epoch
-%     [tmp, circlefreq_evoked, circletime_evoked] = fourieranalysis_circleVpath(vpathcircle_task_long{i}, trialonset{i});
-%     circlepow_evoked(i,:,:) = squeeze(nanmean(abs(tmp).^2));
-%     circlespctrm_evoked(i,:,:) = squeeze(nanmean(spctrm));
-% end
-% 
-% figure; plot(circlefreq_evoked, nanmean(circlepow_evoked,3)), hold on, plot(circlefreq_evoked, nanmean(nanmean(circlepow_evoked,3)), 'k', 'LineWidth', 2) 
-% title({'Circle vpath PSD per subject, WorkMem task', sprintf('trial length %g sec (%g Hz)', round(unique(diff(onsetidx))/250,4), round(1/(unique(diff(onsetidx))/250),2))});
-% ylabel('PSD'), xlabel('Frequency (Hz)')
-% print([config.figdir,'WrkMemCircleFreq'],'-dpng');
 
 %% Task 2: StoryMath task
 % extract file structure:
