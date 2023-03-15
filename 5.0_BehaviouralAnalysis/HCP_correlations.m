@@ -19,6 +19,7 @@ load(config.metricfile);
 %% Load HCP participant info:
 
 subjdata = readtable([config.participantcovariates, 'unrestricted_aquinn501_4_7_2017_9_4_13.csv']);
+rstr_data = readtable([config.resultsdir, 'RESTRICTED_matsvanes_1_30_2023_9_38_27.csv']);
 temp = readtable([config.participantcovariates, 'MEGfnames.csv']);
 subj_ids = [];
 for i=1:size(temp,1)
@@ -33,7 +34,28 @@ for i=1:length(subj_ids)
     inds(i) = find(subjdata.Subject == subj_ids(i));
 end
 subjdata = subjdata(inds,:);
+rstr_data = rstr_data(inds,:);
 
+InfMx = [];
+InfMx.SubjectID = rstr_data.Subject;
+InfMx.MotherID = rstr_data.Mother_ID;
+InfMx.FatherID = rstr_data.Father_ID;
+Zygosity = [];
+for k=1:numel(inds)
+    if isempty(rstr_data.ZygosityGT{k})
+        if isempty(rstr_data.ZygositySR{k})
+            Zygosity{k,1} = 'NotTwin';
+        else
+            Zygosity{k,1} = rstr_data.ZygositySR{k};
+        end
+    elseif strcmp(rstr_data.ZygosityGT{k}, 'DZ')
+        Zygosity{k,1} = 'NotMZ';
+    else
+        Zygosity{k,1} = rstr_data.ZygosityGT{k};
+    end
+end
+InfMx.Zygosity = Zygosity;
+save([config.resultsdir, 'APACE_InfMx'], 'InfMx')
 % also load more detailed data and align:
 
 subjdata_detailed = readtable([config.participantcovariates, 'vars.txt']);
@@ -148,7 +170,7 @@ FOcorr = corr(temp4);
 %imagesc(FOcorr)
 
 [a,b] = pca(temp4,'NumComponents',2);
-%figure();scatter(b(:,1),b(:,2),'filled')
+figure();scatter(b(:,1),b(:,2),'filled')
 
 [A1,B1] = nets_hierarchy(FOcorr,FOcorr,1:12,'');
 set(gcf,'Position',[337 350 477 388]);
@@ -211,10 +233,10 @@ clustermember(A1(1:find(A1(1,:)==681))) = 2;
 clustermember = prob_fit<=0.5; % above doesn't work!
 %
 grouplabels = {'Cognitive','Sensorimotor'};
-[pval,anovatab] = anova1(hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1,'off');
+[pval,anovatab] = anova1(1./hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1,'off');
 figure('Position',[8 486 1433 312]);
 subplot(1,4,1);
-boxplot(hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1);
+boxplot(1./hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1);
 set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
 
 plot4paper('fMRI Group','MEG Cycle length');
@@ -237,7 +259,7 @@ for i=1:12
     [pval_FO1(i),anovatab_FO1{i}]=anova1(hmm_1stlevel.FO(:,i),clustermember(subj_mapping)+1,'off');
     subplot(3,4,i);
     boxplot(hmm_1stlevel.FO(:,i),clustermember(subj_mapping)+1);
-    plot4paper('fMRI Group',['MEG State ',int2str(i),' FO']);
+    xlabel('fMRI Group'), ylabel(['MEG State ',int2str(i),' FO']);
     title(['p=',num2str(pval_FO1(i))]);
     set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
 end
@@ -326,7 +348,7 @@ if ~isfile(optimalseqfile)
 else
     load(optimalseqfile);
 end
-bestseq = bestsequencemetrics{2};
+bestseq = bestsequencemetrics{1};
 % save each subject's rotational strength by this metric:
 disttoplot_manual = zeros(12,1);
 for i3=1:12
