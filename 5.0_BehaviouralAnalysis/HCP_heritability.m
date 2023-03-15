@@ -4,7 +4,7 @@ config = getStudyDetails(whichstudy);
 color_scheme = colorscheme(whichstudy);
 
 [~, ~, subj_age, subj_gender subj_RTs] = getparticipantinfo(whichstudy);
-info = [subj_age,subj_gender,subj_RTs];
+info = [subj_age,subj_gender+1,subj_RTs];
 
 load(config.metricfile);
 
@@ -97,23 +97,22 @@ for im = 1:3
   ACEfit_Par=[];
   ACEfit_Par.Model = 'ACE';
   if strcmp(measure{im}, 'cycle_rate')
-      data = 1./hmm_2ndlevel.cycletime_mu_sess;
+      data = zscore(1000*1./hmm_2ndlevel.cycletime_mu_sess, [],'all');
       regr = [info(:,1:2)];
   elseif strcmp(measure{im}, 'rotational_momentum')
-      data = [hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum];
+      data = zscore([hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum], [], 'all');
       regr = [info(:,1:2)];
   elseif strcmp(measure{im}, 'FO')
-      data = hmm_2ndlevel.FO;
+      data = zscore(hmm_2ndlevel.FO, [],'all');
       regr = [info(:,1:2), hmm_1stlevel.FO];
   end
   % regress out age and sex
-  data_corrected =  regress_out(data, regr);
-  ACEfit_Par.P_nm = data_corrected';
+  data_corrected = demean(regress_out(data, regr));
+  ACEfit_Par.P_nm =data_corrected';
   ACEfit_Par.InfMx = [config.resultsdir, 'APACE_InfMx.csv'];
 %     ACEfit_Par.InfMx = [config.resultsdir, 'heritability/twins.csv'];
 
   ACEfit_Par.ResDir = [config.resultsdir, 'heritability/', measure{im}, '/'];
-%       ACEfit_Par.ResDir = [config.resultsdir, 'tmp/', measure{im}, '/'];
 
   ACEfit_Par.Dsnmtx = [];
   ACEfit_Par.Nlz = 1;
@@ -157,7 +156,7 @@ for im = 1:3
   heritability.(measure{im}) = a;
 end
 
-save(config.metricfile, 'heritability', '-append')
+% save(config.metricfile, 'heritability', '-append')
 
 
 %% plot correlations twins
