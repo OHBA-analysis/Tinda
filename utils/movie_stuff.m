@@ -671,7 +671,7 @@ if usemanual
 else
   optimalseqfile = [fileparts(hmmdir), '/bestseq',int2str(1),'.mat'];
   tmp=load(optimalseqfile);
-  bestseq = tmp.bestsequencemetrics{2};  
+  bestseq = tmp.bestsequencemetrics{1};  
 end
 
 
