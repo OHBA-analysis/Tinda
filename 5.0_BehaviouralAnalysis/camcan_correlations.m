@@ -110,19 +110,31 @@ for k=1:100000
 end
 %}
 % regress out age and sex from all data.
-regr = cogdata(:,1:2);
-cycrate_mu_corrected =  regress_out(1./hmm_2ndlevel.cyctime_mu, regr); 
-rotational_momentum_corrected =  regress_out(hmm_1stlevel.cycle_metrics.rotational_momentum, regr);   
-FO_corrected =  regress_out(hmm_2ndlevel.FO, regr);   
-cogdata_corrected =  regress_out(cogdata(:,3:end), regr);   
 
+regr = zscore(cogdata(:,1:2));
+cycrate_mu_corrected =  demean(regress_out(zscore(1./hmm_2ndlevel.cyctime_mu), regr)); 
+rotational_momentum_corrected =  demean(regress_out(zscore(hmm_1stlevel.cycle_metrics.rotational_momentum), regr));   
+FO_corrected =  demean(regress_out(zscore(hmm_2ndlevel.FO), regr));   
+cogdata_corrected =  demean(regress_out(zscore(cogdata(:,3:end)), regr));   
+% find outlier in cogdata Motor Speed (7)
+outliers = find(cogdata_corrected(:,7)>5);
+keep = setdiff(1:length(cycrate_mu_corrected), outliers);
+
+% remove outlier and renormalize
+cogdata_corrected = demean(cogdata_corrected(keep, :));
+cycrate_mu_corrected = demean(cycrate_mu_corrected(keep,:));
+rotational_momentum_corrected = demean(rotational_momentum_corrected(keep,:));
+FO_corrected = demean(FO_corrected(keep,:));
+
+
+%% CCA
 %%%%%%%%%%%%%%%%%%%%%%%
 % rotational momentum %
 %%%%%%%%%%%%%%%%%%%%%%%
 % without correction for age, sex:
 % [A,B,r,U,V,stats] = canoncorr(hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers),cogdata(~outliers,3:end));
 % with correction:
-[A,B,r,U,V,stats] = canoncorr(rotational_momentum_corrected(~outliers,1),cogdata_corrected(~outliers,:));
+[A,B,r,U,V,stats] = canoncorr(rotational_momentum_corrected,cogdata_corrected);
 tmp = [B];
 stats1 = stats;
 stats1.r = r;
@@ -132,7 +144,7 @@ xticklabels(cogdatalabels(3:end))
 xtickangle(45)
 ylabel('Coefficient strength')
 title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
+% save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
 
 %%%%%%%%%%%%%%
 % cycle rate %
@@ -140,7 +152,7 @@ save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
 % without correction for age, sex:
 % [A,B,r,U,V,stats] = canoncorr(1./hmm_2ndlevel.cyctime_mu(~outliers),cogdata(~outliers,:));
 % with correction:
-[A,B,r,U,V,stats] = canoncorr(cycrate_mu_corrected(~outliers,1),cogdata_corrected(~outliers,:));
+[A,B,r,U,V,stats] = canoncorr(cycrate_mu_corrected,cogdata_corrected);
 tmp = [tmp,B];
 stats2 = stats;
 stats2.r = r;
@@ -150,7 +162,7 @@ xticklabels(cogdatalabels(3:end))
 xtickangle(45)
 ylabel('Coefficient strength')
 title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_rate'])
+% save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_rate'])
 
 
 setup_figure([],2,0.5)
@@ -161,14 +173,7 @@ ylabel('Coefficient strength')
 legend({'Rotational momentum', 'Cycle rate'}, 'Location', 'southwest')
 title({sprintf('Rotational momentum: R=%0.2f, p=%0.3f', stats1.r, stats1.p),...
   sprintf('Cycle rate: R=%s, p=%s', stats2.r, stats2.p)})
-save_figure([config.figdir 'figure4_correlations/4_CCA_combined'])
-
-
-
-% Do the same but with Bayesian Partial Least Squares (Vidaurre 2013) as in
-% Vidaurre PNAS 2018
-
-
+% save_figure([config.figdir 'figure4_correlations/4_CCA_combined'])
 
 
 
