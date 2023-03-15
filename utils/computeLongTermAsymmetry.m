@@ -27,26 +27,36 @@ if ~exist('dostat', 'var')
     dostat=1;
 end
 
+if exist('replayidx', 'var') && ~isempty(replayidx)
+    replay_state=1;
+else
+    replay_state=0;
+end    
+
 
 nSj = length(vpath);
 
 if ntiles>2
-    FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1, ceil(ntiles/2));
+    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1, ceil(ntiles/2));
     dostat=false;
 else
-    FO = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
+    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1);
 end
 FO_all = [];
-if dotaskglm, FO_residual = zeros(K,K,2,nSj,length(intervalpercentiles)-1);
+if dotaskglm, FO_residual = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1);
 else, FO_residual=[]; end
 
 for iSj=1:nSj
+    if replay_state
+        replay = zeros(size(vpath{iSj}));
+        replay(replayidx{iSj})=1;
+    end
     if sum(T{iSj})~=length(vpath{iSj})
         error('Dimension mismatch between T and vpath');
     end
     T_breaks = cumsum(T{iSj}); % indices of HMM chain breaks to be excluded
     if dotaskglm
-        if exist('replayidx') && ~isempty(replayidx)
+        if exist('replayidx', 'var') && ~isempty(replayidx)
             v=zeros(length(vpath{iSj}), K);
             for ik=1:K
                 v(:,ik) = vpath{iSj}==ik;
@@ -83,12 +93,18 @@ for iSj=1:nSj
             v_demean = reshape(v_demean, [], K);
         end
     end
-    for ik=1:K
+    for ik=1:K+replay_state
         intervalDesign = zeros(length(vpath{iSj}),1);
         tempaway = [];
         tempto = [];
-        ontimes = find(diff([0;vpath{iSj}==ik;0])==1)-1;
-        offtimes = find(diff([0;vpath{iSj}==ik;0])==-1);
+        
+        if ik>K % this means there is a replay state
+            ontimes = find(diff([0;replay;0])==1)-1;
+            offtimes = find(diff([0;replay;0])==-1);
+        else
+            ontimes = find(diff([0;vpath{iSj}==ik;0])==1)-1;
+            offtimes = find(diff([0;vpath{iSj}==ik;0])==-1);
+        end
         %         if isempty(percentiles)
         %             for t=1:length(offtimes)-1
         %                 % assert interval doesn't cross segment boundaries:
@@ -109,8 +125,15 @@ for iSj=1:nSj
         tintervals{iSj,ik} = ontimes(2:end)-offtimes(1:end-1);
         for ip=1:length(intervalpercentiles)-1
             if ~any(isnan(intervalpercentiles(ip:ip+1)))
-                p_low = prctile(tintervals{iSj,ik},intervalpercentiles(ip));
-                p_high = prctile(tintervals{iSj,ik},intervalpercentiles(ip+1));
+                if 0 % looks at percentages without zero interval lengths
+                    tmp = tintervals{iSj,ik};
+                    tmp(tmp==0)=[];
+                    p_low = prctile(tmp,intervalpercentiles(ip));
+                    p_high = prctile(tmp,intervalpercentiles(ip+1));
+                else
+                    p_low = prctile(tintervals{iSj,ik},intervalpercentiles(ip));
+                    p_high = prctile(tintervals{iSj,ik},intervalpercentiles(ip+1));
+                end
             elseif isnan(intervalpercentiles(ip))
                 p_low = 0;
                 p_high = intervalpercentiles(ip+1);
@@ -126,6 +149,10 @@ for iSj=1:nSj
                 % will contain -ntiles/2:ntile:0.
                 tempaway = [];
                 tempto = [];
+                if replay_state
+                    tempaway_replay = [];
+                    tempto_replay = [];
+                end
                 for t=1:length(offtimes)-1
                     t_interval = ontimes(t+1)-offtimes(t); 
                     if ~any(ismember(T_breaks,[offtimes(t):ontimes(t+1)]))
@@ -133,10 +160,19 @@ for iSj=1:nSj
                             if ntiles==2 % keep this because it's the historic way.
                                 tempaway = [tempaway;vpath{iSj}(offtimes(t):offtimes(t)+floor(t_interval/2),:)];
                                 tempto = [tempto;vpath{iSj}(ontimes(t+1)-floor(t_interval/2):ontimes(t+1),:)];
+                                if replay_state
+                                    tempaway_replay = [tempaway_replay;replay(offtimes(t):offtimes(t)+floor(t_interval/2),:)];
+                                    tempto_replay = [tempto_replay; replay(ontimes(t+1)-floor(t_interval/2):ontimes(t+1),:)];
+                                end
                             else
                                 t_interval = t_interval+1;
                                 tempaway = [tempaway;vpath{iSj}(offtimes(t)+(ntile-1)*floor(t_interval/ntiles):offtimes(t)+ntile*floor(t_interval/ntiles)-1,:)];
                                 tempto = [tempto;vpath{iSj}(ontimes(t+1)-((ntiles/2)-(ntile-1))*floor(t_interval/ntiles)+1:ontimes(t+1)-((ntiles/2)-(ntile))*floor(t_interval/ntiles),:)];
+                                if replay_state
+                                    tempaway_replay = [tempaway_replay;replay(offtimes(t)+(ntile-1)*floor(t_interval/ntiles):offtimes(t)+ntile*floor(t_interval/ntiles)-1,:)];
+                                    tempto_replay = [tempto_replay;replay(ontimes(t+1)-((ntiles/2)-(ntile-1))*floor(t_interval/ntiles)+1:ontimes(t+1)-((ntiles/2)-(ntile))*floor(t_interval/ntiles),:)];
+                                end
+                                
                             end
                             intervalDesign(offtimes(t):offtimes(t)+floor(t_interval/ntiles), 1) = 1;
                             intervalDesign(ontimes(t+1)-floor(t_interval/ntiles):ontimes(t+1), 1) = 2;
@@ -144,10 +180,15 @@ for iSj=1:nSj
                         end
                     end
                 end
-                for ik2=1:K
+                for ik2=1:K+replay_state
                     if ~isempty(tempaway)
-                        FO(ik,ik2,1,iSj,ip,ntile) = mean(tempaway==ik2);
-                        FO(ik,ik2,2,iSj,ip,ntile) = mean(tempto==ik2);
+                        if ik2>K % replay state
+                            FO(ik,ik2,1,iSj,ip,ntile) = mean(tempaway_replay==1);
+                            FO(ik,ik2,2,iSj,ip,ntile) = mean(tempto_replay==1);
+                        else
+                            FO(ik,ik2,1,iSj,ip,ntile) = mean(tempaway==ik2);
+                            FO(ik,ik2,2,iSj,ip,ntile) = mean(tempto==ik2);
+                        end
                     end
                 end
             end
