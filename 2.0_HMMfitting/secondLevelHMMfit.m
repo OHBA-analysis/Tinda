@@ -418,7 +418,7 @@ overlapstring='_overlappingWindows';
 
 % infer cycle times:
 if whichstudy~=4
-  load([config.hmmfolder,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
+  load([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
   
   samp_minute = (config.sample_rate*60); % split into minute by minute chunks
   for subnum = 1:config.nSj
