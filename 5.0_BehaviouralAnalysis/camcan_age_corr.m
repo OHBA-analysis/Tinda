@@ -1,14 +1,14 @@
-%% load age data from camcan and check for relationship with FO assymetry:
+w%% load age data from camcan and check for relationship with FO assymetry:
 if ~exist('whichstudy','var')
   whichstudy = 4; % 1 denotes the hmm model run in Higgins2020_neuron
 end
 config = getStudyDetails(whichstudy);
 
 % load in the TINDA results
-load(config.metricfile)
+load([config.resultsdir, 'HMMsummarymetrics'])
 
 % set some parameters
-bonf_ncomparisons = 264;
+bonf_ncomparisons = 132;
 
 
 if whichstudy==4
@@ -17,7 +17,7 @@ if whichstudy==4
   % check how age predicts each FO assymetry measure:
   for k1=1:12
     for k2=1:12
-      Y = permute(hmm_1stlevel.FO_assym(k1,k2,1,:),[4,1,2,3]);
+      Y = permute(hmm_1stlevel.cycle_metrics.FO_assym(k1,k2,1,:),[4,1,2,3]);
       X = info(:,1);
       [R,P] = corrcoef(X,Y);
       rho(k1,k2) = R(1,2);
