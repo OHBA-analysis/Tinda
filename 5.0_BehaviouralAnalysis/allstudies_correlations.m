@@ -5,7 +5,7 @@ if ~exist('whichstudy','var')
 end
 config = getStudyDetails(whichstudy);
 % other preliminary setup for plotting etc:
-color_scheme = set1_cols();
+color_scheme = colorscheme(whichstudy);
 
 % include option for simulations here - results to be saved in adjacent
 % folder:
@@ -28,7 +28,7 @@ elseif whichstudy==3
 elseif whichstudy==4
   info = camcan_getparticipantinfo(config);
   subj_age = info(:,1);
-  subj_gender = info(:,3); % ??
+  subj_gender = info(:,3); % 1 denotes male, 2 female
   subj_RTs = info(:,5);
   
 end
@@ -41,17 +41,19 @@ fontsize = 18;
 for ireg = 1:2
   if ireg==1
     reglabel = 'Age';
-    
   else
     reglabel = 'Gender';
-    
   end
-  figure('Position',[588 63 412 735]);
+  
+  %% FRACTIONAL OCCUPANCY
+  setup_figure([],1,2);%'Position',[588 63 412 735]);
   subplot(211);
   distributionPlot(hmm_1stlevel.FO,'showMM',2,'color',{color_scheme{1:size(hmm_1stlevel.FO,2)}});
-  set(gca,'YLim',[0 1.1*prctile(hmm_1stlevel.FO(:),97.5)],'FontSize',fontsize)
-  title('Fractional Occupancy');plot4paper('RSN-State','Proportion');grid on;
+  set(gca,'YLim',[0 1.1*prctile(hmm_1stlevel.FO(:),97.5)])
+  title('Fractional Occupancy');xlabel('RSN-State'), ylabel('Proportion');grid on;
   subplot(212);
+  pvals = [0.05, 0.01, 0.001];
+  pvals_line = {':k', '--k', '-.k'};
   for k=1:12
     to_keep = ~isnan(info(:,ireg));
     [R,P] = corrcoef(hmm_1stlevel.FO(to_keep,k),info(to_keep,ireg));
@@ -67,19 +69,17 @@ for ireg = 1:2
       set(b,'LineWidth',2);
     end
   end
+  
   % add significance asterisks:
   yl = ylim;
   for k=1:12
-    if pvals_FO(k)<0.0005/12
-      plot(k,yl(2),'*k','LineWidth',2,'MarkerSize',15)
-    elseif pvals_FO(k)<0.05/12
-      plot(k,yl(2),'*k','MarkerSize',15)
-    end
+    sigstar({k}, 12*pvals_FO(k));
   end
   set(gca,'XTick',1:12);
-  plot4paper('State','Correlation');
-  print([config.figdir '0_temporalstats_FO_',reglabel],'-depsc')
+  xlabel('State'), ylabel('Correlation');
+%   print([config.figdir '0_temporalstats_FO_',reglabel],'-depsc')
   
+%% LIFE TIMES
   figure('Position',[588 63 412 735]);
   subplot(211);
   distributionPlot(hmm_1stlevel.LT_mu ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{1:size(hmm_1stlevel.FO,2)}})
@@ -103,18 +103,14 @@ for ireg = 1:2
     end
   end
   % add significance asterisks:
-  yl = ylim;
   for k=1:12
-    if pvals_LT(k)<0.0005/12
-      plot(k,yl(2),'*k','LineWidth',2,'MarkerSize',15)
-    elseif pvals_LT(k)<0.05/12
-      plot(k,yl(2),'*k','MarkerSize',15)
-    end
+    sigstar({k}, 12*pvals_LT(k));
   end
   set(gca,'XTick',1:12);
-  plot4paper('State','Correlation');
-  print([config.figdir '0_temporalstats_LT_',reglabel],'-depsc')
+  xlabel('State'), ylabel('Correlation');
+%   print([config.figdir '0_temporalstats_LT_',reglabel],'-depsc')
   
+%% INTERVAL TIMES
   figure('Position',[588 63 412 735]);
   subplot(211);
   distributionPlot(hmm_1stlevel.IT_mu ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{1:size(hmm_1stlevel.FO,2)}})
@@ -140,15 +136,11 @@ for ireg = 1:2
   % add significance asterisks:
   yl = ylim;
   for k=1:12
-    if pvals_IT(k)<0.0005/12
-      plot(k,yl(2),'*k','LineWidth',2,'MarkerSize',15)
-    elseif pvals_IT(k)<0.05/12
-      plot(k,yl(2),'*k','MarkerSize',15)
-    end
+    sigstar({k}, 12*pvals_IT(k));
   end
   set(gca,'XTick',1:12);
-  plot4paper('State','Correlation');
-  print([config.figdir '0_temporalstats_IT_',reglabel],'-depsc')
+  xlabel('State'), ylabel('Correlation');
+%   print([config.figdir '0_temporalstats_IT_',reglabel],'-depsc')
   
   % correlation with all lifetimes:
   figure();
@@ -184,7 +176,7 @@ for ireg = 1:2
   plot4paper(reglabel,'Median State IT');
   H = lsline(gca);
   set(H,'LineWidth',2);
-  print([config.figdir '0_temporalstats_aggregate_',reglabel],'-depsc')
+%   print([config.figdir '0_temporalstats_aggregate_',reglabel],'-depsc')
   
 end
 
@@ -212,7 +204,7 @@ plot4paper('State IT','State IT');
 title('IT correlation over subjects');
 axis square;
 colorbar;
-print([config.figdir 'supp/','1_populationFOcorrelation'],'-dpng')
+% print([config.figdir 'supp/','1_populationFOcorrelation'],'-dpng')
 
 % extract metric to show which of the two clusters a participant falls
 % into:
@@ -252,23 +244,27 @@ colorweights = log(colorweights) - min(log(colorweights(:))) + 0.01;
 colorweights = colorweights./(max(colorweights(:)+0.1));
 
 % make plots:
-fig = figure('Position',[38 476 1366 322]);
-CM = colormap(fig,hot(100));
 optimalseqfile = [config.hmmfolder,'bestseq',replace(int2str(whichstudy), '5', '3'),'.mat'];
 load(optimalseqfile);
-bestseq = bestsequencemetrics{2};
-
+bestseq = bestsequencemetrics{1};
+%%
+fig=setup_figure([], 1, 0.35);
+CM = colormap(fig,hot(20));
 for i=1:3
-  subplot(1,4,i);
+  ax(i) = axes('Position', [0.035+(i-1)*0.3 0.1 0.225, 0.8])
   for i2=1:12
-    CW{i2} = CM(ceil(length(CM)*colorweights(i2,i)),:);
+    CW{i2} = CM(ceil(length(CM)*10.^colorweights(i2,i)/10),:);
   end
   cyclicalstatesubplot(bestseq,zeros(12),zeros(12),CW);
+  set_font(8)
 end
-subplot(1,4,4);
-colorbar;
+ax(4) = axes('Position', [0.035+(i)*0.275 0.15 0.1, .6])
+h=colorbar;
+h.Ticks = [0 1];
+h.TickLabels = {'low', 'high'}
+text(1.1, 1.2, 'FO')
 axis off
-print([config.figdir,'1AMetastateProfile'],'-dpng');
+% save_figure([config.figdir,'figure5_correlations/5_metastate_profile'], [], false);
 %% check for correlation with cycle rates:
 W = 125;
 
@@ -514,7 +510,7 @@ title(['p=',num2str(P(2,1))]);
 plot4paper('AbsFOAssym','RotationalMomentum');
 
 %%
-
+%{
 %% part 1: Viterbi path assymetry analysis
 % first load data and plot basic temporal statistics:
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
@@ -604,9 +600,9 @@ temp = squeeze(nansum(nansum(abs(squeeze((FO2(:,:,1,:)-FO2(:,:,2,:))./nanmean(FO
 to_exclude = temp>20;
 
 bestsequencemetrics = optimiseSequentialPattern(FO1);
-bestseq1 = bestsequencemetrics{2};
+bestseq1 = bestsequencemetrics{1};
 bestsequencemetrics = optimiseSequentialPattern(FO2(:,:,~to_exclude));
-bestseq2 = bestsequencemetrics{2};
+bestseq2 = bestsequencemetrics{1};
 cyclicalstateplot(bestseq1,mean_direction1,pvals1<0.0000001*(0.05/bonf_ncomparisons));
 cyclicalstateplot(bestseq1,mean_direction2,pvals2<(0.05/bonf_ncomparisons));
 
@@ -638,3 +634,4 @@ scatter(squeeze(nansum(nansum(abs(assym2),2),1)),rotational_momentum2,'filled');
 % appears these differences are driven by a few 'wierd' subjects
 
 load('/Users/chiggins/Documents/CamCan/CogDatAll.mat')
+%}
