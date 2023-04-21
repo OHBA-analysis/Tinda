@@ -22,16 +22,36 @@ for iperm=1:n_sim_perm
   simulation{iperm}.assym_ttest = a;
   
   
-  if iperm==1
-    simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
-    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{1}, angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
-  else
-    simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
-  end
+  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
+  angleplot_sim = circle_angles(simulation{iperm}.bestsequencemetrics{1});
+  simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{1}, angleplot_sim, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
+  
 end
 hmm_1stlevel.simulation = simulation;
 
 
+clear q;
+for iperm=1:n_sim_perm
+q(iperm,:) = hmm_1stlevel.simulation{iperm}.cycle_metrics.rotational_momentum./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
+end
+
+fig = setup_figure([],1,1);
+shadedErrorBar(1:100, mean(q,2), std(q,[],2)./sqrt(config.nSj))
+hline(mean(hmm_1stlevel.cycle_metrics.rotational_momentum./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum), '--k')
+xlabel('Simulation')
+ylabel('M')
+yl = ylim;
+ylim([yl(1)*1.1 0])
+
+text(0.4, .1, 'Observed', 'Units', 'normalized')
+title({'Mean (+SEM) rotational momentum', 'from Markovian model'})
+box off
+
+save_figure([config.figdir, 'figure_supp_tinda_metrics/','2supp_rotational_momentum_markovian']);
+
+
+
+%%
 % Is there something in the HMM transprob matrix when we look at the
 % simulation aggregate?
 simulation_average=[];
