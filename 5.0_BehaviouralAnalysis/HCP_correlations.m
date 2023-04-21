@@ -235,15 +235,23 @@ clustermember = prob_fit<=0.5; % above doesn't work!
 grouplabels = {'Cognitive','Sensorimotor'};
 [pval,anovatab] = anova1(1./hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1,'off');
 figure('Position',[8 486 1433 312]);
-subplot(1,4,1);
+subplot(1,5,1);
 boxplot(1./hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1);
 set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
-
-plot4paper('fMRI Group','MEG Cycle length');
+plot4paper('fMRI Group','MEG Cycle rate');
 title(['p=',num2str(pval)]);
+
+grouplabels = {'Cognitive','Sensorimotor'};
+[pval,anovatab] = anova1(hmm_1stlevel.cycle_metrics.rotational_momentum,clustermember(subj_mapping)+1,'off');
+subplot(1,5,2);
+boxplot(hmm_1stlevel.cycle_metrics.rotational_momentum,clustermember(subj_mapping)+1);
+set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
+plot4paper('fMRI Group','MEG Cycle strength');
+title(['p=',num2str(pval)]);
+
 for i=1:3
     [pval_FO2(i),anovatab_FO2{i}]=anova1(hmm_2ndlevel.FO(:,i),clustermember(subj_mapping)+1,'off');
-    subplot(1,4,i+1);
+    subplot(1,5,i+2);
     boxplot(hmm_2ndlevel.FO(:,i),clustermember(subj_mapping)+1);
     plot4paper('fMRI Group',['MEG Metastate ',int2str(i),' FO']);
     title(['p=',num2str(pval_FO2(i))]);
