@@ -1,4 +1,4 @@
-whichstudy = 4; % 1 denotes the hmm model run in Higgins2020_neuron
+whichstudy = 6; % 1 denotes the hmm model run in Higgins2020_neuron
 config = getStudyDetails(whichstudy);
 % other preliminary setup for plotting etc:
 color_scheme = colorscheme(whichstudy);
@@ -50,7 +50,7 @@ pos = {[105 2.45], [105 -0.02], [1.5 2.4], [1.5 -0.018]};
 xl = {[0 119], [0.5, 2.5]};
 cnt=1;
 
-for k1=1:2
+for k1=1
     for k2=1:2
         fig = setup_figure([], 1,1); hold on
         scatter(tmp1{k1}, (tmp2{k2}), 'MarkerFaceColor', clr{1}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{1}, 'MarkerEdgeAlpha', 0.2)
@@ -63,16 +63,159 @@ for k1=1:2
             xticklabels({'Male', 'Female'})
         end
         rho = corr(tmp1{k1}, tmp2{k2});
-        text(pos{cnt}(1), pos{cnt}(2),{sprintf('R=%.02f', rho), sprintf('p=%0.04f', stats{k1}.p(1+k2))}, 'HorizontalAlignment', 'center')
+        text(pos{cnt}(1), pos{cnt}(2),{sprintf('R=%.02f', rho), sprintf('p=%0.04f', 4*stats{k1}.p(1+k2))}, 'HorizontalAlignment', 'center')
+        
         xlim(xl{k1})
         box off
         title(ttl{cnt})
         cnt=cnt+1;
+%         save_figure([config.figdir sprintf('figure4_correlations/4_correlation_%s_%s', xlb{k1}, ylb2{k2})])
+        
+    end
+end
+
+%%
+group=subj_gender(~outliers);
+for k1=2
+    for k2=1:2
+        fig = setup_figure([], 1,1); hold on
+        
+        boxplot_with_scatter((tmp2{k2}), [], [], group)
+        xlabel(xlb{k1}), ylabel(ylb{k2})
+        if k1==2
+            xticks([1,2])
+            xticklabels({'Male', 'Female'})
+        end
+        mu = [mean(tmp2{k2}(group==1)), mean(tmp2{k2}(group==2))];
+        sig = [std(tmp2{k2}(group==1)), std(tmp2{k2}(group==2))];
+        sig_pool = sqrt(((sum(group==1)-1)*sig(1).^2 + (sum(group==2)-1)*sig(2).^2)/(length(group)-2));
+        cohend = diff(mu)./sig_pool;
+        h=sigstar([1,2], 4*stats{k1}.p(1+k2))
+%         text(pos{cnt}(1), pos{cnt}(2),{sprintf("Cohen's d=%.02f", cohend), sprintf('p=%0.04f', 4*stats{k1}.p(1+k2))}, 'HorizontalAlignment', 'center')
+        xlim(xl{k1})
+        box off
+        title(ttl{cnt})
+        cnt=cnt+1;
+
         save_figure([config.figdir sprintf('figure4_correlations/4_correlation_%s_%s', xlb{k1}, ylb2{k2})])
         
     end
 end
 
+
+
+%%
+% and also save in a single figure together with the heritability
+clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4940 0.1840 0.5560], [0.4660 0.6740 0.1880], [0.3010 0.7450 0.9330]};
+load([config.basedir, 'Study3/HMMsummarymetrics.mat'], 'heritability')
+
+fig = setup_figure([], 2,1),
+
+ax(1) = axes('Position', [0.125 0.575 0.25 0.35]);
+k1=1; %age, sex
+k2=1; % rate, strength
+cnt=1;
+scatter(tmp1{k1}, (tmp2{k2}), 'MarkerFaceColor', clr{3}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{3}, 'MarkerEdgeAlpha', 0.2);
+h1 = lsline()
+h1.Color = 'k';
+h1.LineWidth = 2;
+xlabel(xlb{k1}), 
+rho = corr(tmp1{k1}, tmp2{k2});
+title({sprintf('R = %.02f', rho), sprintf('p = %0.04f', 4*stats{k1}.p(1+k2))})
+xlim([10 95])
+xticks(20:20:80)
+ylim([1 3.5])
+box off
+ylabel({'\bf \fontsize{15} Cycle rate \rm', ''})
+
+
+cnt=2; k1=2; k2=1;
+ax(cnt) = axes('Position', [0.4 0.575 0.25 0.3675]);
+boxplot_with_scatter((tmp2{k2}), [], .3, group)
+xlabel(xlb{k1}), 
+ax(cnt).YAxis.Visible = 'off'; 
+xticks([1,2])
+xticklabels({'Male', 'Female'})
+mu = [mean(tmp2{k2}(group==1)), mean(tmp2{k2}(group==2))];
+sig = [std(tmp2{k2}(group==1)), std(tmp2{k2}(group==2))];
+sig_pool = sqrt(((sum(group==1)-1)*sig(1).^2 + (sum(group==2)-1)*sig(2).^2)/(length(group)-2));
+cohend = diff(mu)./sig_pool;
+h=sigstar([1,2], 4*stats{k1}.p(1+k2))
+        title({sprintf("Cohen's d = %.02f", cohend), sprintf('p = %0.04f', 4*stats{k1}.p(1+k2))})
+xlim(xl{k1})
+ylim([1 3.5])
+box off
+
+ax(5) = axes('Position', [0.725 0.575 0.25, 0.37]);
+im=1;
+absdiff = [abs((mean(heritability.data{im}(heritability.pairs{1,1},:),2) - mean(heritability.data{im}(heritability.pairs{1,2},:),2)));...
+    abs((mean(heritability.data{im}(heritability.pairs{2,1},:),2) - mean(heritability.data{im}(heritability.pairs{2,2},:),2)));...
+    abs((mean(heritability.data{im}(heritability.pairs{3,1},:),2) - mean(heritability.data{im}(heritability.pairs{3,2},:),2)))];
+G = []; for k=1:3; G=[G;k*ones(size(heritability.pairs{k,1}))]; end
+
+c={[0.3020    0.6863    0.2902], [0.5961    0.3059    0.6392], [0.5020    0.6941    0.8275]};
+boxplot_with_scatter(absdiff, c, 0.6, G)
+box off
+xticklabels({'MZ', 'DZ', 'unrelated'})
+ylabel('\Delta pairs')
+title({sprintf('h^2 = %.02f', heritability.cycle_rate.Ests(1,1)), sprintf('p = %0.04f', 2*heritability.cycle_rate.Ps(1,1))})
+xlabel('Relatedness')
+
+
+
+cnt=3; k1=1;k2=2;
+ax(cnt) = axes('Position', [0.125 0.075 0.25 0.35]);
+scatter(tmp1{k1}, (tmp2{k2}), 'MarkerFaceColor', clr{3}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{3}, 'MarkerEdgeAlpha', 0.2);
+h1 = lsline()
+h1.Color = 'k';
+h1.LineWidth = 2;
+xlabel(xlb{k1}), ylabel(ylb{k2})
+rho = corr(tmp1{k1}, tmp2{k2});
+title({sprintf('R = %.02f', rho), sprintf('p = %0.04f', 4*stats{k1}.p(1+k2))})
+xlim([10 95])
+xticks(20:20:80)
+ylim([-.2 0.1])
+box off
+% text(0.8,1.2, '\bfCycle strength\rm', 'Units', 'Normalized')
+ylabel({'\bf \fontsize{15} Cycle strength \rm', ''})
+
+
+cnt=2; k1=2; k2=2;
+ax(cnt) = axes('Position', [0.4 0.075 0.25 0.3675]);
+boxplot_with_scatter((tmp2{k2}), [], .3, group)
+xlabel(xlb{k1}), 
+ax(cnt).YAxis.Visible = 'off'; 
+xticks([1,2])
+xticklabels({'Male', 'Female'})
+mu = [mean(tmp2{k2}(group==1)), mean(tmp2{k2}(group==2))];
+sig = [std(tmp2{k2}(group==1)), std(tmp2{k2}(group==2))];
+sig_pool = sqrt(((sum(group==1)-1)*sig(1).^2 + (sum(group==2)-1)*sig(2).^2)/(length(group)-2));
+cohend = diff(mu)./sig_pool;
+h=sigstar([1,2], 4*stats{k1}.p(1+k2))
+        title({sprintf("Cohen's d = %.02f", cohend), sprintf('p = %0.04f', 4*stats{k1}.p(1+k2))})
+xlim(xl{k1})
+ylim([-.2 .1])
+box off
+
+
+
+ax(6) = axes('Position', [0.725 0.075 0.25, 0.37]);
+im=2;
+absdiff = [abs((mean(heritability.data{im}(heritability.pairs{1,1},:),2) - mean(heritability.data{im}(heritability.pairs{1,2},:),2)));...
+    abs((mean(heritability.data{im}(heritability.pairs{2,1},:),2) - mean(heritability.data{im}(heritability.pairs{2,2},:),2)));...
+    abs((mean(heritability.data{im}(heritability.pairs{3,1},:),2) - mean(heritability.data{im}(heritability.pairs{3,2},:),2)))];
+G = []; for k=1:3; G=[G;k*ones(size(heritability.pairs{k,1}))]; end
+
+c={[0.3020    0.6863    0.2902], [0.5961    0.3059    0.6392], [0.5020    0.6941    0.8275]};
+boxplot_with_scatter(absdiff, c, 0.6, G)
+box off
+xticklabels({'MZ', 'DZ', 'unrelated'})
+ylabel('\Delta pairs')
+title({sprintf('h^2 = %.02f', heritability.rotational_momentum.Ests(1,1)), sprintf('p = %0.04f', 2*heritability.rotational_momentum.Ps(1,1))})
+xlabel('Relatedness')
+
+
+        save_figure([config.figdir 'figure4_correlations/4_correlations_all'],[],false)
 
 %% CCA with intelligence
 [cogdata,cogdatalabels] = camcan_getCognitiveData(config);
@@ -144,7 +287,7 @@ xticklabels(cogdatalabels(3:end))
 xtickangle(45)
 ylabel('Coefficient strength')
 title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-% save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
+save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
 
 %%%%%%%%%%%%%%
 % cycle rate %
@@ -162,7 +305,7 @@ xticklabels(cogdatalabels(3:end))
 xtickangle(45)
 ylabel('Coefficient strength')
 title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-% save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_rate'])
+save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_rate'])
 
 
 setup_figure([],2,0.5)
@@ -173,7 +316,22 @@ ylabel('Coefficient strength')
 legend({'Rotational momentum', 'Cycle rate'}, 'Location', 'southwest')
 title({sprintf('Rotational momentum: R=%0.2f, p=%0.3f', stats1.r, stats1.p),...
   sprintf('Cycle rate: R=%s, p=%s', stats2.r, stats2.p)})
-% save_figure([config.figdir 'figure4_correlations/4_CCA_combined'])
+save_figure([config.figdir 'figure4_correlations/4_CCA_combined'])
+
+%%
+resp_label = {'cycle rate', 'rotational momentum'};
+% find outliers
+for k = 1:2
+  if k==1
+    y = cycrate_mu_corrected;
+  elseif k==2
+    y = rotational_momentum_corrected;
+  end
+  [b{k},dev{k},stats{k}] = glmfit(cogdata_corrected, y, 'normal');
+end
+
+
+
 
 
 

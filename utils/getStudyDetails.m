@@ -7,6 +7,7 @@ if isfolder('/Volumes/T5_OHBA/')
   config.figdir = ['/Volumes/T5_OHBA/Projects/Tinda/Study',int2str(whichstudy),'/'];
 else
   config.figdir = ['/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study',int2str(whichstudy),'/figures/'];
+  config.basedir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/';
 end
   config.resultsdir = ['/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study',int2str(whichstudy),'/'];
 
@@ -88,7 +89,23 @@ elseif whichstudy==5
   config.sample_rate=240;
   config.metricfile = [config.resultsdir, 'HMMsummarymetrics'];%[config.hmmfolder,'HMMsummarymetrics.mat'];
   config.reordering_states = 'coherence'; % can be 'replay' (originally)
-  
+elseif whichstudy==6 % this is Chet's CamCan model fit:
+  basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study4/ChetFit/';
+  config.resultsdir=basedir;
+  config.figdir = [config.resultsdir, 'figures/'];
+  config.nSj = 612;
+  config.hmmfolder = basedir;
+  config.hmmfilename = [];%'hmm_analysis.mat';
+  config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
+  config.sample_rate = 250;
+  %config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
+  config.matfilelist = fullfile(basedir, 'Poissdata_125_overlappingWindows/filelist.mat');
+  config.participantcovariates = basedir;
+  config.participantfile = fullfile(basedir, 'camcan_all.csv');
+  config.secondlevelmodelfile = fullfile(basedir, 'secondLevelHMM_stoch_Poiss_window125_K3_overlappingWindows.mat');
+  config.Poiss_dir = fullfile(basedir, 'Poissdata_125_overlappingWindows/');
+  config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
+  config.reordering_states = 'coherence'; 
 end
 
 if isfolder('/Applications')

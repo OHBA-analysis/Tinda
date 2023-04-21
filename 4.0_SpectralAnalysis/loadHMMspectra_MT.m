@@ -1,10 +1,14 @@
 if useMT
-  if whichstudy==4
-    f = h5read([config.resultsdir, 'spectra/spectra.h5'], '/f');
-    psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/psd');
-    psd = double(permute(psd.r, [4,3,2,1]));
+  if whichstudy==4 || whichstudy==6
     coh = h5read([config.resultsdir, 'spectra/spectra.h5'], '/coh');
     coh = permute(coh, [5,4,3,1,2]);
+    f = h5read([config.resultsdir, 'spectra/spectra.h5'], '/f');
+    psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/psd');
+    if whichstudy==4
+        psd = double(permute(psd.r, [4,3,2,1]));
+    elseif whichstudy==6
+        psd = double(permute(psd, [4,3,2,1]));
+    end
     subj_weight = h5read([config.resultsdir, 'spectra/spectra.h5'], '/w')';
     wb_comp = h5read([config.resultsdir, 'spectra/spectra.h5'], '/wb_comp');
     nnmf_psd = h5read([config.resultsdir, 'spectra/spectra.h5'], '/nnmf_psd');
@@ -18,7 +22,7 @@ if useMT
   % permute state numbers
   if use_WB_nnmf
     fname = [fname, '_MT_nnmf'];
-    if 0%exist([fname, '.mat'], 'file')
+    if exist([fname, '.mat'], 'file')
       load(fname)
     else
       [~, new_state_ordering] = sort(mean(reshape(permute(nnmf_coh(:,:,1,:,:), [2,1,3,4,5]), 12,[]),2),'descend');
@@ -95,7 +99,7 @@ else
       [P, coh, f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[], false);
     end
     [P,coh,f] = loadHMMspectra(config,whichstudy,hmm,run_inds,[],false);
-  elseif whichstudy==4
+  elseif whichstudy==4 || whichstudy==6
     % compute FO per subj:
     for i=1:length(vpath)
       for k=1:K

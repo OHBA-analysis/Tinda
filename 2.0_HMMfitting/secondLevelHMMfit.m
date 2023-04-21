@@ -9,6 +9,30 @@ color_scheme = set1_cols();
 
 %% Set Poisson window length to average state lifetime:
 
+if whichstudy==6
+    use_WB_nnmf=true;
+    K=12;
+    hmm.K=K;
+    if whichstudy==6
+    fname = [config.resultsdir, 'coherence_state_ordering'];
+    if use_WB_nnmf
+        fname = [fname, '_MT_nnmf'];
+    end
+    load(fname)
+    q=load([config.resultsdir, 'vpath']);
+    vpath=cellfun(@(x) x+1, cellfun(@double, cellfun(@transpose, q.vpath, 'UniformOutput', false), 'UniformOutput',false), 'UniformOutput', false);
+    for k=1:numel(vpath)
+        k
+        tmp = vpath{k}+100;
+        for k2=1:K
+            tmp(tmp==new_state_ordering(k2)+100) = k2;
+        end
+        vpath{k} = tmp;
+    end
+    hmmT = num2cell(q.T);
+    clear q
+end
+else
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
 
 hmm = temp.hmm;
@@ -108,7 +132,7 @@ for subnum=1:config.nSj
 end
 
 Poisswindow = ceil(mean(LT_sj(:)));
-
+end
 %%
 %W = Poisswindow; % window length to sum over
 W = 125; %set arbitrary half second window
@@ -165,7 +189,7 @@ for iSj=1:config.nSj
     end
   end
   T_poiss(T_poiss==0)=[];
-  if whichstudy==4
+  if whichstudy==4 || whichstudy==6
     if ~isfolder([config.resultsdir,'Poissdata_',int2str(W),overlapstring]) % originally config.hmmdir
       mkdir([config.resultsdir,'Poissdata_',int2str(W),overlapstring]);
     end
@@ -222,7 +246,7 @@ end
 % end
 
 %%
-n_runs = 5;
+n_runs = 10;
 if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state one
   for i_run = 1:n_runs
     options = [];
@@ -280,7 +304,7 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
     % options.Pstructure(3,4)=0;
     options.decodeGamma = false;
     options.standardise = false;
-    if whichstudy~=4
+    if whichstudy~=4 && whichstudy~=6
       [hmmtemp,Gammatemp,~,~,~,~,fehist] = hmmmar(X_poiss,T_poiss,options);
       
       if i_run==1 || fehist(end)<lowestfe
@@ -309,7 +333,7 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
       % Hack to implemnet stochastic inference:
       n_batch = 30;
       for i=1:100
-        thisbatch = sort(randperm(600,n_batch));
+        thisbatch = sort(randperm(config.nSj,n_batch));
         X_poiss = []; T_poiss = [];
         % loading batch files:
         fprintf(['\nLoading batch files, batch',int2str(i)]);
@@ -369,7 +393,7 @@ if whichstudy<4
   plot4paper('Init run','Min Gamma');
   print([config.figdir,'figure_2ndlevel_hmm/', 'ConvergenceRecord_window',int2str(W)],'-dpng');
 else
-  if whichstudy==4
+  if whichstudy==4 || whichstudy==6
     if isfield(options.hmm, 'Gamma')
       hmmPoiss = rmfield(options.hmm,'Gamma');
     else
@@ -388,7 +412,7 @@ else
     else
       load([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
     end
-    end
+  end
   % and infer each subject's associated state timecourse:
   options.updateObs = 0;
   options.decodeGamma = 1;
@@ -407,7 +431,7 @@ else
     T_poiss = [T_poiss; temp.T];
   end
   hmmPoiss.gamma = GammaPoiss;
-if whichstudy==4
+if whichstudy==4 || whichstudy==6
   save([config.resultsdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss', 'GammaPoiss','T_poiss','Poiss_subj_inds');
 end
 end
@@ -417,7 +441,7 @@ W=125;K=3;
 overlapstring='_overlappingWindows';
 
 % infer cycle times:
-if whichstudy~=4
+if whichstudy~=4 && whichstudy~=6
   load([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','feall','GammaPoiss','T_poiss','Poiss_subj_inds');
   
   samp_minute = (config.sample_rate*60); % split into minute by minute chunks
@@ -514,11 +538,11 @@ if whichstudy~=4
 else
   load([config.resultsdir,'secondLevelHMM_stoch_Poiss_window',num2str(W),'_K',int2str(K),overlapstring,'.mat'],'hmmPoiss','GammaPoiss','T_poiss','Poiss_subj_inds');
    
-  if ~contains(config.Poiss_dir,'overlappingWindows')
+  if ~contains(config.Poiss_dir,'overlappingWindows') && whichstudy==4
     figdir = [config.figdir,'4_covariates_W',int2str(W),'/'];
     mkdir(figdir);
     clear FO
-    for subnum=1:600
+    for subnum=1:config.nSj
       Gamtemp = hmmPoiss.gamma(Poiss_subj_inds==subnum,:);
       cycletimes = getStateIntervalTimes(Gamtemp,length(Gamtemp));
       cycletime_mu(subnum,:) = cellfun(@mean,cycletimes);
@@ -534,11 +558,13 @@ else
     mkdir(figdir);
     clear cycletimes cycletime_mu cycletime_std cycletime_med FO cyctimes lifetimes cycletime_mu_min cycletime_med_min cycletime_std_min
     load([config.Poiss_dir,'filelist.mat'])
-    for k=1:length(mat_files_poiss)
-      mat_files_poiss{k} = strrep(mat_files_poiss{k}, '/Volumes/CamsHD2/CamCan_2021/HMM/', sprintf('/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study%d/', whichstudy));
+    if whichstudy==4
+        for k=1:length(mat_files_poiss)
+            mat_files_poiss{k} = strrep(mat_files_poiss{k}, '/Volumes/CamsHD2/CamCan_2021/HMM/', sprintf('/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study%d/', whichstudy));
+        end
     end
     samp_2minute = config.sample_rate*2*60;
-    for subnum=1:600
+    for subnum=1:config.nSj
       fprintf(['\nSubj: ',int2str(subnum)]);
       load(mat_files_poiss{subnum},'Gamma','T');
       %cycletimes = getStateIntervalTimes(Gamma,T);
@@ -592,7 +618,7 @@ if whichstudy==3
   hmm_2ndlevel.cycletime_std_sess = cycletime_std_sess;
   hmm_2ndlevel.cycletime_med_sess = cycletime_med_sess;
   hmm_2ndlevel.FO_meta_sess = FO_meta_sess;
-elseif whichstudy==4
+elseif whichstudy==4 || whichstudy==6
   hmm_2ndlevel.cyctime_min = cyctime;
   hmm_2ndlevel.cycletime_mu_min=cycletime_mu_min;
   hmm_2ndlevel.cycletime_med_min=cycletime_med_min;
@@ -609,4 +635,49 @@ if isfile(config.metricfile)
 else
   save(config.metricfile,'hmm_2ndlevel', '-v7.3')
 end
+
+
+%% Also Plot the metastate profile
+FO_2ndlevel = mean(GammaPoiss);
+statedist_all = zeros(1,12);
+for i=1:3
+    statedist_all = statedist_all + FO_2ndlevel(i)*hmmPoiss.state(i).W.W_mean;
+end
+statedist_all = statedist_all ./ 125; % ratio rather than integer
+for i=1:3
+  colorweights(:,i) = hmmPoiss.state(i).W.W_mean ./ 125 - statedist_all;
+end
+colorweights = (colorweights-min(colorweights(:))+0.01);
+
+colorweights = log(colorweights) - min(log(colorweights(:))) + 0.01;
+colorweights = colorweights./(max(colorweights(:)+0.1));
+
+% make plots:
+if strcmp(config.reordering_states, 'coherence')
+    optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
+else
+    optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
+end
+load(optimalseqfile);
+bestseq = bestsequencemetrics{1};
+
+fig=setup_figure([], 1.5, 0.35);
+CM = colormap(fig,hot(20));
+for i=1:3
+  ax(i) = axes('Position', [0.035+(i-1)*0.3 0.1 0.225, 0.8])
+  for i2=1:12
+    CW{i2} = CM(ceil(length(CM)*10.^colorweights(i2,i)/10),:);
+  end
+  cyclicalstatesubplot(bestseq,zeros(12),zeros(12),CW);
+  set_font(8)
+end
+ax(4) = axes('Position', [0.035+(i)*0.275 0.15 0.1, .6])
+h=colorbar;
+h.Ticks = [0 1];
+h.TickLabels = {'low', 'high'}
+text(1.1, 1.2, 'FO')
+axis off
+ save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile']);
+
+
 
