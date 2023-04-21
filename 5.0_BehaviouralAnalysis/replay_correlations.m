@@ -297,9 +297,9 @@ for perc=[1,5]
     
     %% Redo TINDA where Replay is state 13
     color_scheme_K13 = [color_scheme, {[0 0.4470 0.7410]}];
-
+    
     [FO_replay_orig,~,t_intervals,~] = computeLongTermAsymmetry(vpath,T,K,[],[],topidx,false);
-
+    
     FO_replay = (FO_replay_orig(:,:,:,1:2:end)+FO_replay_orig(:,:,:,2:2:end))/2;
     [pvals_replay, stat_replay] = FO_permutation_test(FO_replay, K+1, nSj);
     replay.K13.FO_intervals=FO_replay;
@@ -438,9 +438,23 @@ for perc=[1,5]
     %% TINDA run on quartiles
     k=2;
     percentiles = 10:10:90;
+    percentiles
     for i=1:length(percentiles)
-        [FO_p(:,:,:,:,i),~,t_intervals_p{i},~] = computeLongTermAsymmetry(vpath,T,K, [percentiles(i)-9, percentiles(i)+10],[],topidx,false,6);
+        [FO_p(:,:,:,:,i),~,t_intervals_p{i},~] = computeLongTermAsymmetry(vpath,T,K, [percentiles(i)-9, percentiles(i)+10],[],topidx,false,6);% do it in percentiles
     end
+    % if we want to look at absolute sum of occurrence (not normalized by
+    % interval length) - do the following
+    if 0
+        for k=1:9
+            for k2=1:86
+                for k3=1:13
+                    FO_p(k3,:,:,k2,k) = FO_p(k3,:,:,k2,k)*sum(intervals{k}{k2,k3});
+                end
+            end
+        end
+    end
+    
+    
     FO_replay_p = (FO_p(:,:,:,1:2:end,:) + FO_p(:,:,:,2:2:end,:))/2;
     
     
@@ -538,6 +552,56 @@ for perc=[1,5]
     save_figure([config.figdir, sprintf('2_FO_binned_percentiled_normalized_stateIT_zoomed_perc%d', perc)],[],false);
     
     
+    
+    %% Tinda run on specific interval durations
+    k=2;
+    lags =  [0,4,16,50,100,200,500,1000,5000]/1000; % ms
+    lags_samples = lags*config.sample_rate;
+
+    [FO_p,~,t_intervals_p,~] = computeLongTermAsymmetry(vpath,T,K, lags_samples,[],topidx,false,[],'abs');% do it in absolute terms
+
+    % if we want to look at absolute sum of occurrence (not normalized by
+    % interval length) - do the following
+    if 0
+        for k=1:9
+            for k2=1:86
+                for k3=1:13
+                    FO_p(k3,:,:,k2,k) = FO_p(k3,:,:,k2,k)*sum(intervals{k}{k2,k3});
+                end
+            end
+        end
+    end
+    
+    
+    FO_replay_p = (FO_p(:,:,:,1:2:end,:) + FO_p(:,:,:,2:2:end,:))/2;
+    a=[];
+    for i=1:K+1
+        for j=1:K+1
+            for ip=1:length(lags)-1
+                [a.h(i,j,ip), a.pvals(i,j,ip), a.ci(i,j,ip,:), a.stat(i,j,ip)] = ttest(squeeze(FO_replay_p(i,j,1,:,ip)), squeeze(FO_replay_p(i,j,2,:,ip)));
+                tstat(i,j,ip) = a.stat(i,j,ip).tstat;
+            end
+        end
+    end
+    replay.K13.perc.assym_ttest = a;
+    
+    replay.K13.perc.FO = FO_p;
+    replay.K13.perc.lags=lags;
+    replay.K13.perc.t_intervals=t_intervals_p;
+
+    
+    % get some extra variables for creating a bubblechart in a newer matlab
+    % version
+    bubble.mean_direction = squeeze(mean(FO_replay_p(:,:,1,:,:) - FO_replay_p(:,:,2,:,:),4));
+    bestseq_nott = load([config.basedir, 'Study1/bestseq1_coherence.mat']);
+    bestseq_nott = bestseq_nott.bestsequencemetrics{1};
+    bubble.bestseq_nott = bestseq_nott;
+    bubble.angleplot_nott = circle_angles(bestseq_nott); 
+    bubble.tstat=tstat;
+    bubble.cmap = flipud(brewermap(256,'RdBu'));
+    replay.K13.perc.bubbleplot = bubble;
+   
+    
     save([config.resultsdir, 'tinda_replay_perc', num2str(perc)], 'replay')
 end
 
@@ -555,8 +619,8 @@ for k1=states
         k3=setdiff(states, [k1,k2]);
         for iSes = 1:nSes
             v = vpath{iSes};
-            replay = zeros(size(v));
-            replay(topidx{iSes})=1;
+            rep = zeros(size(v));
+            rep(topidx{iSes})=1;
             t = T{iSes};
             tmp_sum_occ=[];tmp_sum_occ_bin=[];
             intv=[];
@@ -565,15 +629,15 @@ for k1=states
             while w==0
                 % times are in samples (Fs=1/250)
                 if k1>K
-                    k1_ontime = ix + find(replay(ix+1:end)==1,1);
-                    k1_offtime = k1_ontime + find(diff(replay(k1_ontime:end))~=0,1);
+                    k1_ontime = ix + find(rep(ix+1:end)==1,1);
+                    k1_offtime = k1_ontime + find(diff(rep(k1_ontime:end))~=0,1);
                 else
                     k1_ontime = ix + find(v(ix+1:end)==k1,1);
                     k1_offtime = k1_ontime + find(diff(v(k1_ontime:end))~=0,1);
                 end
                 
                 if k2>K
-                    k2_ontime = k1_offtime  + find(replay(k1_offtime:end)==1,1) - 1;
+                    k2_ontime = k1_offtime  + find(rep(k1_offtime:end)==1,1) - 1;
                 else
                     k2_ontime = k1_offtime  + find(v(k1_offtime:end)==k2,1) - 1;
                 end
@@ -582,15 +646,15 @@ for k1=states
                     intv=[intv; nan];
                     tmp_sum_occ = [tmp_sum_occ; 0];
                     tmp_sum_occ_bin = [tmp_sum_occ_bin; zeros(1,nbins)];
-                elseif (~any(v(k1_offtime:k2_ontime)==k1) || ~any(replay(k1_offtime:k2_ontime)==1)) && ...% if k1 appears again before k2 does - abort
+                elseif (~any(v(k1_offtime:k2_ontime)==k1) || ~any(rep(k1_offtime:k2_ontime)==1)) && ...% if k1 appears again before k2 does - abort
                         ~isempty(k2_ontime)  % or if k2 doesn't appear anymore - also abort
                     intv=[intv; k2_ontime-k1_offtime];
                     bin_size = floor((k2_ontime-k1_offtime)./nbins);
                     residual_bin = floor(((k2_ontime-k1_offtime) - floor((k2_ontime-k1_offtime)./nbins)*nbins)./(nbins-1)); % %binsize*nbins might nog equal the interval. Leave residual in between bins
                     
                     if k3>K
-                        tmp_sum_occ = [tmp_sum_occ; sum(replay(k1_offtime:k2_ontime)==1)];
-                        tmp_sum_occ_bin = [tmp_sum_occ_bin; sum(replay(k1_offtime:k1_offtime+bin_size-1)==1), sum(replay(k1_offtime+bin_size+residual_bin:k1_offtime+2*bin_size+residual_bin-1)==1), sum(replay(k2_ontime-bin_size:k2_ontime-1)==1)];
+                        tmp_sum_occ = [tmp_sum_occ; sum(rep(k1_offtime:k2_ontime)==1)];
+                        tmp_sum_occ_bin = [tmp_sum_occ_bin; sum(rep(k1_offtime:k1_offtime+bin_size-1)==1), sum(rep(k1_offtime+bin_size+residual_bin:k1_offtime+2*bin_size+residual_bin-1)==1), sum(rep(k2_ontime-bin_size:k2_ontime-1)==1)];
                     else
                         tmp_sum_occ = [tmp_sum_occ; sum(v(k1_offtime:k2_ontime)==k3)];
                         tmp_sum_occ_bin = [tmp_sum_occ_bin; sum(v(k1_offtime:k1_offtime+bin_size-1)==setdiff(states, [k1,k2])), sum(v(k1_offtime+bin_size+residual_bin:k1_offtime+2*bin_size+residual_bin-1)==setdiff(states, [k1,k2])), sum(v(k2_ontime-bin_size:k2_ontime-1)==setdiff(states, [k1,k2]))];
@@ -616,16 +680,16 @@ intervals=intervals(states,states,:);
 FO_interplay=(FO_interplay_ses(states,states,1:2:end)+FO_interplay_ses(states,states,2:2:end))./2;
 
 % Now seperate into percentiles
-percentiles = 50:10:90;
+percentiles = 10:10:90;
 nperc=length(percentiles);
 for k1=1:3
     for k2=setdiff(1:3,k1)
         for iSes=1:nSes
-        tmp1 = intervals{k1,k2,iSes};
-        tmp2 = [intervals{k1,k2,iSes}; intervals{k2,k1,iSes}];tmp2(isnan(tmp2))=[];% take percentile over both i-j and j-i
+            tmp1 = intervals{k1,k2,iSes};
+            tmp2 = [intervals{k1,k2,iSes}; intervals{k2,k1,iSes}];tmp2(isnan(tmp2))=[];% take percentile over both i-j and j-i
             for k3=1:nperc
                 ix = tmp1>=percentile(tmp2, percentiles(k3)-9) & tmp1<percentile(tmp2, percentiles(k3)+10);
-                sum_occ_bin_perc(k1,k2,k3,:,iSes) = nanmean(sum_occ_bin{k1,k2,iSes}(ix,:)./intervals{k1,k2,iSes}(ix));
+                sum_occ_bin_perc(k1,k2,k3,:,iSes) = nanmean(sum_occ_bin{k1,k2,iSes}(ix,:));%nanmean(sum_occ_bin{k1,k2,iSes}(ix,:)./intervals{k1,k2,iSes}(ix));
                 intervals_perc(k1,k2,k3,iSes) = percentile(tmp2, percentiles(k3))./250;
             end
         end
@@ -648,37 +712,37 @@ cmap=inferno;
 fig=setup_figure([],1.5,2);
 subplot(3,1,1),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc(1,2,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc(2,1,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; caxis([0,1].*max(abs(c))); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,2,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfPAN\rm', '4','5','6','\bfDMN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,2,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfPAN\rm', '4','5','6','\bfDMN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('Replay Occurrence')
 
 subplot(3,1,2),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc(1,3,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc(3,1,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; caxis([0,1].*max(abs(c))); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfDMN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfDMN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('PAN Occurrence')
 
 subplot(3,1,3),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc(2,3,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc(3,2,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; caxis([0,1].*max(abs(c))); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(2,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfPAN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfPAN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(2,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfPAN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfPAN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('DMN Occurrence')
 suptitle({'Binned and percentiled FO', ''})
-    save_figure([config.figdir, sprintf('2_FO_DMN_PAN_Replay_binned_percentiled_perc%d', perc)],[],false);
+save_figure([config.figdir, sprintf('2_FO_DMN_PAN_Replay_binned_percentiled_perc%d', perc)],[],false);
 
 
 cmap = flipud(brewermap(256, 'RdBu'));
 fig=setup_figure([],1.5,2);
 subplot(3,1,1),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc_norm(1,2,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc_norm(2,1,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,2,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfPAN\rm', '4','5','6','\bfDMN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,2,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfPAN\rm', '4','5','6','\bfDMN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('Replay Occurrence')
 
 subplot(3,1,2),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc_norm(1,3,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc_norm(3,1,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfDMN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(1,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfDMN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('PAN Occurrence')
 
 subplot(3,1,3),hold on, imagesc(1:3,1:nperc,squeeze(sum_occ_bin_perc_norm(2,3,:,:))), axis xy, imagesc(4:6, 1:nperc, squeeze(sum_occ_bin_perc_norm(3,2,:,:))), xlim([0.5, 6.5]), ylim([0.5 nperc+.5])
 c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); ylabel('mean IT'), xlabel('Interval time bin')
-colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(2,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfPAN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfPAN\rm'}), 
+colorbar, yticks(1:nperc), yticklabels(round(squeeze(intervals_perc(2,3,:)))), colormap(cmap), xticks([0.5 1:3 3.5 4:6, 6.5]),xticklabels({'\bfPAN\rm', '1','2','3','\bfReplay\rm', '4','5','6','\bfPAN\rm'}),
 xtickangle(45), vline(3.5, '-k'), title('DMN Occurrence')
 suptitle({'Binned and percentiled FO (normalized by percentile FO)', ''})
 save_figure([config.figdir, sprintf('2_FO_DMN_PAN_Replay_binned_percentiled_normalized_perc%d', perc)],[],false);
@@ -781,7 +845,7 @@ for iSes=1:nSes
     for i = w/2+1:length(vpath{iSes})-w/2
         X_poiss_DMN{iSes}(i,1) = sum(vpath{iSes}(i-w/2:i+w/2-1)==1);
     end
-%     X_poiss_DMN{iSes}=zscore(X_poiss_DMN{1});
+    %     X_poiss_DMN{iSes}=zscore(X_poiss_DMN{1});
 end
 
 % Run 2nd level HMM
@@ -823,61 +887,79 @@ for i_run = 1:n_runs
     gamsum(i_run,:) = mean(Gammatemp);
 end
 
-for iSes=1:nSes
-    [~, vpath_DMN{iSes}(:,1)] = max(GammaPoiss(sum(cat(1,T{1:iSes-1}))+1:sum(cat(1,T{1:iSes})),:),[],2);
-    vpath_DMN_replay{iSes} = vpath_DMN{iSes};
-    vpath_DMN_replay{iSes}(topidx{iSes}) = 3;
-end
+save([config.resultsdir, sprintf('tinda_replay_perc%d_dmn_burst', perc)], 'options', 'feall', 'w', 'X_poiss_DMN')
+
 % state 1 is DMN off
 % state 2 is DMN on
-% state 3 is replay on
 options.dropstates=false;
 for iSes=1:nSes
     LT = getStateLifeTimes(vpath_DMN{iSes},T{iSes},options);
     LTmedian(iSes,:) = cellfun(@median,LT);
+    LTmu(iSes,:) = cellfun(@mean,LT);
     FracOcc(iSes,:) = getFractionalOccupancy(vpath_DMN{iSes},sum(T{iSes}),options);
     IT = getStateIntervalTimes(vpath_DMN{iSes},T{iSes},options);
     ITmedian(iSes,:) = cellfun(@median,IT);
+    ITmu(iSes,:) = cellfun(@mean,IT);
+    
 end
 LTmedian = (LTmedian(1:2:end,:) + LTmedian(2:2:end,:))./2;
 ITmedian = (ITmedian(1:2:end,:) + ITmedian(2:2:end,:))./2;
+LTmu = (LTmu(1:2:end,:) + LTmu(2:2:end,:))./2;
+ITmu = (ITmu(1:2:end,:) + ITmu(2:2:end,:))./2;
 FracOcc = (FracOcc(1:2:end,:) + FracOcc(2:2:end,:))./2;
-figure; 
+
+dmn_burst = [];
+dmn_burst.FO = FracOcc;
+dmn_burst.LT = LT;
+dmn_burst.LTmedian = LTmedian;
+dmn_burst.LTmu = LTmu;
+dmn_burst.IT = IT;
+dmn_burst.ITmedian = ITmedian;
+dmn_burst.ITmu = ITmu;
+
+
+figure;
 subplot(1,3,1), distributionPlot(FracOcc), title('Fractional Occupancy')
 subplot(1,3,2), distributionPlot(ITmedian), title('Interval Times')
 subplot(1,3,3), distributionPlot(LTmedian), title('Life Times')
+save_figure([config.figdir, '2_DMN_burst_stats'],[],false);
 
+% TINDAsum_occ_bin_perc
+k=2;
+percentiles = [0:20:100];
+for i=1:length(percentiles)-1
+    [FO_p_masked(:,:,:,:,i),~,t_intervals_p{i},~] = computeLongTermAsymmetry(vpath_DMN,T,2, [percentiles(i), percentiles(i+1)],[],topidx,false,6);
+end
+FO_p_masked = (FO_p_masked(:,:,:,1:2:end,:) + FO_p_masked(:,:,:,2:2:end,:))/2;
+sum_occ_bin_perc = squeeze(mean(FO_p_masked,4));
+t_int = squeeze(mean(cellfun(@mean, cat(3,t_intervals_p{:})),1));
+fig=setup_figure([],2,1);
+cmap = inferno;
+bins = 1:size(FO_p_masked,3);
+subplot(2,2,1); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc(1,3,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'Replay when DMN is ON', '(DMN OFF interval)'}), xlabel('DMN bursting'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(1,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN silence \rm', '1','2','3','4','5','6','\bfDMN silence\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,2); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc(3,2,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'DMN burst in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,3); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc(2,3,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'Replay when DMN is OFF', '(DMN ON interval)'}), xlabel('DMN not bursting'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(2,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN burst\rm', '1','2','3','4','5','6','\bfDMN burst\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,4); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc(3,1,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'DMN silence in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
+suptitle({'Binned and percentiled FO',''})
+save_figure([config.figdir, sprintf('2_DMN_burst_FO_binned_percentiled_perc%d', perc)],[],false);
 
-    k=2;
-    percentiles = [0:20:100];
-    for i=1:length(percentiles)-1
-        [FO_p_masked(:,:,:,:,i),~,t_intervals_p{i},~] = computeLongTermAsymmetry(vpath_DMN_replay,T,3, [percentiles(i), percentiles(i+1)],[],[],false,6);
-    end
-    FO_p_masked = (FO_p_masked(:,:,:,1:2:end,:) + FO_p_masked(:,:,:,2:2:end,:))/2;
-    q = squeeze(mean(FO_p_masked,4));
-    t_int = squeeze(mean(cellfun(@mean, cat(3,t_intervals_p{:})),1));
-    fig=setup_figure([],2,1); 
-    cmap = inferno;
-    bins = 1:size(FO_p_masked,3);
-    subplot(2,2,1); imagesc(bins, 1:5, squeeze(q(1,3,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'Replay when DMN is ON', '(DMN OFF interval)'}), xlabel('DMN bursting'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(1,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN silence \rm', '1','2','3','4','5','6','\bfDMN silence\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,2); imagesc(bins, 1:5, squeeze(q(3,2,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'DMN burst in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,3); imagesc(bins, 1:5, squeeze(q(2,3,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'Replay when DMN is OFF', '(DMN ON interval)'}), xlabel('DMN not bursting'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(2,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN burst\rm', '1','2','3','4','5','6','\bfDMN burst\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,4); imagesc(bins, 1:5, squeeze(q(3,1,:,:))'); c=caxis; caxis([0,1].*max(abs(c))); axis xy, title({'DMN silence in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
-     suptitle({'Binned and percentiled FO',''})
-% save_figure([config.figdir, sprintf('2_FO_binned_percentiled_perc%d', perc)],[],false);
-    %%
-    qq = squeeze(nanmean(FO_p_masked./mean(FO_p_masked,3),4));
-    cmap = flipud(brewermap(256, 'RdBu'));
-    fig=setup_figure([],2,1);  
-    subplot(2,2,1); imagesc(bins, 1:5, squeeze(qq(1,3,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'Replay when DMN is ON', '(DMN OFF interval)'}), xlabel('DMN bursting'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(1,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfnoDMN\rm', '1','2','3','4','5','6','\bfnoDMN\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,2); imagesc(bins, 1:5, squeeze(qq(3,2,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'DMN burst in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,3); imagesc(bins, 1:5, squeeze(qq(2,3,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'Replay when DMN is OFF', '(DMN ON interval)'}), xlabel('DMN not bursting'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(2,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','4','5','6','\bfDMN\rm'}), xtickangle(45), vline(3.5, '-k')
-    subplot(2,2,4); imagesc(bins, 1:5, squeeze(qq(3,1,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'DMN silence in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
-    
-    pause(1); suptitle({'Binned and percentiled FO (normalized by percentile FO)'})
-%        save_figure([config.figdir, sprintf('2_FO_binned_percentiled_normalized_perc%d', perc)],[],false);
-   
-    
+% Normalize FO by row
+sum_occ_bin_perc_norm = squeeze(nanmean(FO_p_masked./mean(FO_p_masked,3),4));
+cmap = flipud(brewermap(256, 'RdBu'));
+fig=setup_figure([],2,1);
+subplot(2,2,1); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc_norm(1,3,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'Replay when DMN is ON', '(DMN OFF interval)'}), xlabel('DMN bursting'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(1,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfnoDMN\rm', '1','2','3','4','5','6','\bfnoDMN\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,2); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc_norm(3,2,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'DMN burst in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,3); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc_norm(2,3,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'Replay when DMN is OFF', '(DMN ON interval)'}), xlabel('DMN not bursting'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(2,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfDMN\rm', '1','2','3','4','5','6','\bfDMN\rm'}), xtickangle(45), vline(3.5, '-k')
+subplot(2,2,4); imagesc(bins, 1:5, squeeze(sum_occ_bin_perc_norm(3,1,:,:))'); c=caxis; c=max(abs(c-1)); caxis([1-c 1+c]); axis xy, title({'DMN silence in', 'replay intervals'}), xlabel('Interval time bin'), ylabel('mean IT (ms)'), colorbar, yticks(1:9), yticklabels(round(t_int(3,:))), colormap(cmap), xticks([0.5 1:6, 6.5]),xticklabels({'\bfReplay\rm', '1','2','3','4','5','6','\bfReplay\rm'}), xtickangle(45), vline(3.5, '-k')
+
+pause(1); suptitle({'Binned and percentiled FO (normalized by percentile FO)'})
+save_figure([config.figdir, sprintf('2_DMN_burst_FO_binned_percentiled_normalized_perc%d', perc)],[],false);
+
+dmn_burst.FO_intervals = FO_p_masked;
+dmn_burst.t_intervals = t_intervals_p;
+dmn_burst.sum_occ_bin_perc = sum_occ_bin_perc;
+dmn_burst.sum_occ_bin_perc_norm = sum_occ_bin_perc_norm;
+save([config.resultsdir, sprintf('tinda_replay_perc%d_dmn_burst', perc)], 'dmn_burst', '-append')
 
 
 
