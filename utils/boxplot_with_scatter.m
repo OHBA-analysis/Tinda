@@ -4,14 +4,27 @@ if ~exist('facealpha', 'var') || isempty(facealpha)
     facealpha=0.6;
 end
 
+if ~exist('group', 'var'),
+    group=[];
+end
+
 [n, m] = size(data);
 hold on
 if m==1
-    if exist('group', 'var') || isempty(group)
+    if ~isempty(group)
         ug = unique(group)
         for k2=1:length(ug)
             k3=ug(k2)
-            scatter(1+ones(sum(group==k3),1).*((k3-1)+(rand(sum(group==k3),1)-0.5)/2),data(group==k3,1),'filled', 'MarkerFaceAlpha',facealpha)
+            if ~exist('facecolor', 'var') || isempty(facecolor)
+                scatter(1+ones(sum(group==k3),1).*((k3-1)+(rand(sum(group==k3),1)-0.5)/2),data(group==k3,1),'filled', 'MarkerFaceAlpha',facealpha)
+            else
+                if iscell(facecolor)
+                    MarkerFaceColor = facecolor{k3};
+                else
+                    MarkerFaceColor = facecolor;
+                end
+                scatter(1+ones(sum(group==k3),1).*((k3-1)+(rand(sum(group==k3),1)-0.5)/2),data(group==k3,1),'filled','MarkerFaceColor', MarkerFaceColor, 'MarkerFaceAlpha',facealpha)
+            end
         end
     else
         k=1;scatter(1+ones(size(data(:,k))).*((k-1)+(rand(size(data(:,k)))-0.5)/2),data(:,k),'filled', 'MarkerFaceAlpha',facealpha)
