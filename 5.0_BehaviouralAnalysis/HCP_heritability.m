@@ -156,21 +156,56 @@ for im = 1:3
   heritability.(measure{im}) = a;
 end
 
-% save(config.metricfile, 'heritability', '-append')
+save(config.metricfile, 'heritability', '-append')
 
 
 %% plot correlations twins
-[mono1,mono2] = find(twinstructure_MEG==1);
-[dy1, dy2] = find(twinstructure_MEG==2);
-[non1, non2] = find(twinstructure_MEG==0);
 
+% find unique ones in all pairs
+pairs = {};
+for ii=1:3
+    [tmp1,tmp2] = find(twinstructure_MEG==mod(ii,3));
+    pairs{ii,1} = [];
+    pairs{ii,2} = [];
+    tmp = [0,0];
+for k=1:length(tmp1)   
+   if ~ismember([tmp1(k), tmp2(k)],tmp, 'rows') && ~ismember([tmp2(k), tmp1(k)],tmp, 'rows')
+       pairs{ii,1} = [pairs{ii,1}; tmp1(k)];
+       pairs{ii,2} = [pairs{ii,2}; tmp2(k)];
+       tmp = [tmp; tmp1(k), tmp2(k)];
+   end
+end
+end
 
-trait = 1./hmm_2ndlevel.cycletime_mu_sess'*1000;
-figure; 
-plot([trait(i); trait(j)], '.-', 'Color', [0 0 0 0.2]), xlim([0.5 2.5])
-clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250]};
+group = [ones(size(pairs{1})); 2*ones(size(pairs{2})); 3*ones(size(pairs{3}))];
 
+fig=setup_figure([],2,0.5);
+for im = 1:2
+    if im==1
+        data{im} = 1./hmm_2ndlevel.cycletime_mu_sess;
+        ttl = 'Cycle rate';
+    else
+        data{im} = [hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum; 
+        ttl = 'Cycle strength';
+    end
+    absdiff = [abs((mean(data{im}(pairs{1,1},:),2) - mean(data{im}(pairs{1,2},:),2)));...
+        abs((mean(data{im}(pairs{2,1},:),2) - mean(data{im}(pairs{2,2},:),2)));...
+        abs((mean(data{im}(pairs{3,1},:),2) - mean(data{im}(pairs{3,2},:),2)))];
+        
+    ax = axes('Position', [0.075+0.5*(im-1) 0.1 0.4, 0.8]);
+    boxplot_with_scatter(absdiff, [], 0.5, group)
+    box off
+    xticklabels({'MZ', 'DZ', 'unrelated'})
+    ylabel('Absolute difference')
+    title(ttl)
+end
+save_figure([config.figdir, 'figure4_correlations/', 'heritability'],[],false)
+heritability.data = data;
+heritability.data_label = {'cycle rate', 'cycle strength'};
+heritability.pairs = pairs;
+heritability.pair_labels = {'MZ', 'DZ', 'non'};
 
+save(config.metricfile, 'heritability', '-append')
 
 
 
