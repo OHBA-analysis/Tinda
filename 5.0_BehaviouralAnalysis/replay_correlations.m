@@ -584,7 +584,11 @@ for perc=[1,5]
 
     [FO_p,~,t_intervals_p,~] = computeLongTermAsymmetry(vpath,T,K, lags_samples,[],topidx,false,[],'abs');% do it in absolute terms
 
-
+        
+    percentiles = 0:20:100;
+    for ip=1:length(percentiles)-1
+        [FO_p(:,:,:,:,ip),~,t_intervals_p{ip}, ~] = computeLongTermAsymmetry(vpath,T,K,percentiles(ip:ip+1),[],topidx,false);
+    end
     
     % if we want to look at absolute sum of occurrence (not normalized by
     % interval length) - do the following
@@ -652,7 +656,7 @@ for perc=[1,5]
     replay.K13.perc.bubbleplot = bubble;
    
     
-    save([config.resultsdir, 'tinda_replay_perc', num2str(perc), '_2'], 'replay')
+    save([config.resultsdir, 'tinda_replay_perc', num2str(perc)], 'replay')
 end
 
 
