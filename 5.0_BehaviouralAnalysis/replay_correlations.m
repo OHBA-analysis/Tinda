@@ -117,6 +117,9 @@ end
 get_replayData
 
 
+config.resultsdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/';
+config.figdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/figures/replay/';
+
 %% Combine the two studies.
 % Load the replay timing info
 rep_scores = cat(1,rep_scores{:});
@@ -175,8 +178,7 @@ for t=1:size(mu_2d,1)
     pause(0.001)
 end
 
-config.resultsdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/';
-config.figdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/figures/replay/';
+
 
 %% Compute TINDA on the resting state
 % run tinda on the continuous data - also run when accounting for replay
@@ -312,6 +314,28 @@ for perc=[1,5]
     replay.K13.assym_ttest = a;
     replay.K13.assym_permtest.stat = stat_replay;
     replay.K13.assym_permtest.pvals = pvals_replay;
+    
+    % also seperately for study1 and study 2
+    replay.K13.study{1}.FO = FO_replay(:,:,:,1:21);
+    a=[];
+    for i=1:K+1
+        for j=1:K+1
+            [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(FO_replay(i,j,1,1:21)), squeeze(FO_replay(i,j,2,1:21)));
+        end
+    end
+    replay.K13.study{1}.assym_ttest = a;
+    replay.K13.study{1}.mean_assym = mean(FO_replay(:,:,1,1:21)-FO_replay(:,:,2,1:21),4);
+    
+    replay.K13.study{2}.FO = FO_replay(:,:,:,22:end);
+    a=[];
+    for i=1:K+1
+        for j=1:K+1
+            [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(FO_replay(i,j,1,22:end)), squeeze(FO_replay(i,j,2,22:end)));
+        end
+    end
+    replay.K13.study{2}.assym_ttest = a;
+    replay.K13.study{2}.mean_assym = mean(FO_replay(:,:,1,22:end)-FO_replay(:,:,2,22:end),4);
+
     
     % Find best ordering by finding the best gap for state 13
     assym = squeeze((replay.K13.FO_intervals(:,:,1,:)-replay.K13.FO_intervals(:,:,2,:))./mean(replay.K13.FO_intervals,3));
@@ -555,11 +579,13 @@ for perc=[1,5]
     
     %% Tinda run on specific interval durations
     k=2;
-    lags =  [0,4,16,50,100,200,500,1000,5000]/1000; % ms
+    lags =  [4,16,50,100,200,500,1000,5000]/1000; % ms
     lags_samples = lags*config.sample_rate;
 
     [FO_p,~,t_intervals_p,~] = computeLongTermAsymmetry(vpath,T,K, lags_samples,[],topidx,false,[],'abs');% do it in absolute terms
 
+
+    
     % if we want to look at absolute sum of occurrence (not normalized by
     % interval length) - do the following
     if 0
@@ -585,24 +611,48 @@ for perc=[1,5]
     end
     replay.K13.perc.assym_ttest = a;
     
-    replay.K13.perc.FO = FO_p;
+    replay.K13.perc.FO = FO_replay_p;
     replay.K13.perc.lags=lags;
     replay.K13.perc.t_intervals=t_intervals_p;
-
+    
+    
+    replay.K13.perc.study{1}.FO = FO_replay_p(:,:,:,1:21,:);
+    a=[];
+    for i=1:K+1
+        for j=1:K+1
+            for ip=1:length(lags)-1
+                [a.h(i,j,ip), a.pvals(i,j,ip), a.ci(i,j,ip,:), a.stat(i,j,ip)] = ttest(squeeze(FO_replay_p(i,j,1,1:21,ip)), squeeze(FO_replay_p(i,j,2,1:21,ip)));
+                tstat(i,j,ip) = a.stat(i,j,ip).tstat;
+            end
+        end
+    end
+    replay.K13.perc.study{1}.assym_ttest = a;
+    replay.K13.perc.study{1}.mean_assym = squeeze(mean(FO_replay_p(:,:,1,1:21,:) - FO_replay_p(:,:,2,1:21,:),4));
+    
+    replay.K13.perc.study{2}.FO = FO_replay_p(:,:,:,22:end,:);
+    a=[];
+    for i=1:K+1
+        for j=1:K+1
+            for ip=1:length(lags)-1
+                [a.h(i,j,ip), a.pvals(i,j,ip), a.ci(i,j,ip,:), a.stat(i,j,ip)] = ttest(squeeze(FO_replay_p(i,j,1,22:end,ip)), squeeze(FO_replay_p(i,j,2,22:end,ip)));
+                tstat(i,j,ip) = a.stat(i,j,ip).tstat;
+            end
+        end
+    end
+    replay.K13.perc.study{2}.assym_ttest = a;
+    replay.K13.perc.study{2}.mean_assym = squeeze(mean(FO_replay_p(:,:,1,22:end,:) - FO_replay_p(:,:,2,22:end,:),4));
     
     % get some extra variables for creating a bubblechart in a newer matlab
     % version
-    bubble.mean_direction = squeeze(mean(FO_replay_p(:,:,1,:,:) - FO_replay_p(:,:,2,:,:),4));
     bestseq_nott = load([config.basedir, 'Study1/bestseq1_coherence.mat']);
     bestseq_nott = bestseq_nott.bestsequencemetrics{1};
     bubble.bestseq_nott = bestseq_nott;
     bubble.angleplot_nott = circle_angles(bestseq_nott); 
-    bubble.tstat=tstat;
     bubble.cmap = flipud(brewermap(256,'RdBu'));
     replay.K13.perc.bubbleplot = bubble;
    
     
-    save([config.resultsdir, 'tinda_replay_perc', num2str(perc)], 'replay')
+    save([config.resultsdir, 'tinda_replay_perc', num2str(perc), '_2'], 'replay')
 end
 
 
