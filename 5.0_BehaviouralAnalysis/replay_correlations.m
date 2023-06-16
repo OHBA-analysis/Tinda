@@ -259,7 +259,7 @@ end
 
 
 %% Plot the distribution of replay events on the cycle plot
-for perc=[1,5]
+for perc=1%[1,5]
     topidx = replay_scores2index(vpath, rep_scores, [], [], perc);
     
     
@@ -577,7 +577,26 @@ for perc=[1,5]
     
     
     
-    %% Tinda run on specific interval durations
+    %% Tinda separate for study 1 and 2
+    k=2;
+        bestseq_nott = load([config.basedir, 'Study1/bestseq1_coherence.mat']);
+    bestseq_nott = bestseq_nott.bestsequencemetrics{1};
+        
+    subs = {1:21,  22:43};
+    for istudy=1:2
+        replay.study{istudy}.FO_intervals = replay.FO_intervals(:,:,:,subs{istudy});
+    a=[];
+    for i=1:K
+        for j=1:K
+                [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(replay.FO_intervals(i,j,1,subs{istudy})), squeeze(replay.FO_intervals(i,j,2, subs{istudy})));
+                tstat(i,j) = a.stat(i,j).tstat;
+        end
+    end
+    replay.study{istudy}.assym_ttest = a;
+    replay.study{istudy}.mean_direction = mean(replay.study{istudy}.FO_intervals(:,:,1,:)-replay.study{istudy}.FO_intervals(:,:,2,:),4);
+    end    
+    %% Tinda run on specific interval duration
+
     k=2;
     lags =  [4,16,50,100,200,500,1000,5000]/1000; % ms
     lags_samples = lags*config.sample_rate;
@@ -617,10 +636,12 @@ for perc=[1,5]
     
     replay.K13.perc.FO = FO_replay_p;
     replay.K13.perc.lags=lags;
-    replay.K13.perc.t_intervals=t_intervals_p;
     
     
     replay.K13.perc.study{1}.FO = FO_replay_p(:,:,:,1:21,:);
+    for i=1:5
+        replay.K13.perc.study{1}.t_intervals{i} = t_intervals_p{i}(1:42,:);
+    end
     a=[];
     for i=1:K+1
         for j=1:K+1
@@ -634,6 +655,9 @@ for perc=[1,5]
     replay.K13.perc.study{1}.mean_assym = squeeze(mean(FO_replay_p(:,:,1,1:21,:) - FO_replay_p(:,:,2,1:21,:),4));
     
     replay.K13.perc.study{2}.FO = FO_replay_p(:,:,:,22:end,:);
+    for i=1:5
+        replay.K13.perc.study{2}.t_intervals{i} = t_intervals_p{i}(43:end,:);
+    end
     a=[];
     for i=1:K+1
         for j=1:K+1
@@ -655,13 +679,23 @@ for perc=[1,5]
     bubble.cmap = flipud(brewermap(256,'RdBu'));
     replay.K13.perc.bubbleplot = bubble;
    
+    for i=1:86
+        state_replay{i} = vpath{i}(topidx{i});
+    end
+    for i=1:86
+        for j=1:12
+            sum_state_replay(i,j) = mean(state_replay{i}==j);
+        end
+    end
     
     save([config.resultsdir, 'tinda_replay_perc', num2str(perc)], 'replay')
+    
+    
 end
 
 
 %% Look at intervals between replay/DMN/PAN
-states=[1,2,13];
+states=[1,4,13];
 sum_occ = cell(length(states), length(states), nSes);
 sum_occ_bin=sum_occ; intervals = sum_occ;
 FO_interplay_ses = nan(length(states), length(states), nSes);
