@@ -4,7 +4,7 @@ fig = setup_figure([],1,.8); hold on
 tmp1=hmm_1stlevel.cycle_metrics.rotational_momentum./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
 boxplot_with_scatter([tmp1, tmp1*nan])
 tmp2 = mean(hmm_1stlevel.perm.rotational_momentum,2)'./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
-scatter(1+ones(size(tmp2)).*((2-1)+(rand(size(tmp2))-0.5)/2),tmp2,25, brewermap(length(tmp), 'Dark2'), 'filled', 'MarkerFaceAlpha',0.6)
+scatter(1+ones(size(tmp2)).*((2-1)+(rand(size(tmp2))-0.5)/2),tmp2,25, brewermap(length(tmp2), 'Dark2'), 'filled', 'MarkerFaceAlpha',0.6)
 h = boxplot([nan(1,length(tmp2)); tmp2]', 'Colors', 'k', 'Width', .75, 'whisker', 1000)
 % set(h, {'linew'}, {2})
 ylim(1.1*[min([min(tmp1), min(tmp2)]), max([max(tmp1), max(tmp2)])])
@@ -20,7 +20,7 @@ save_figure([config.figdir, 'figure_supp_tinda_metrics/','2supp_obs_vs_perm'])
 
 % create inset
 fig = setup_figure([],1,.75); hold on
-scatter(1+ones(size(tmp2)).*((1-1)+(rand(size(tmp2))-0.5)/2),tmp2,25, brewermap(length(tmp), 'Dark2'), 'filled', 'MarkerFaceAlpha',0.6)
+scatter(1+ones(size(tmp2)).*((1-1)+(rand(size(tmp2))-0.5)/2),tmp2,25, brewermap(length(tmp2), 'Dark2'), 'filled', 'MarkerFaceAlpha',0.6)
 h = boxplot([tmp2]', 'Colors', 'k', 'whisker', 1000, 'Width', .75)
 set(h, {'linew'}, {2})
 xlim([0.5 1.5])
@@ -31,7 +31,7 @@ save_figure([config.figdir, 'figure_supp_tinda_metrics/','2supp_obs_vs_perm_inse
 fig = setup_figure([],1,.8); hold on
 tmp = [hmm_1stlevel.cycle_metrics.rotational_momentum, mean(hmm_1stlevel.perm.rotational_momentum,1)']./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
 boxplot_with_scatter(tmp)
-sigstar({[1,2]}, hmm_1stlevel.perm.obs_vs_perm.prob)
+sigstar({[1,2]}, hmm_1stlevel.perm.obs_vs_perm)
 ylabel('M')
 xticklabels({'observed', 'permutations'})
 save_figure([config.figdir, 'figure_supp_tinda_metrics/','2supp_obs_vs_perm'])
@@ -205,7 +205,7 @@ tmp(:,:,4) = [q0.circularity_subject, q1.circularity_subject, q2.circularity_sub
 
 ttl = {{'Rotational momentum'}, {'FO asym fit'}, {'TIDA'}, {'Circularity'}};
 measures = {'rotational_momentum', 'FO_assym_subject_fit', 'TIDA', 'circularity_subject'};%, 'TIDA_perstate', 'rotational_momentum_perstate';
-yl = [-0.2 0.15; -0.4 1.1; 0 0.25; 0 1];
+yl = [-0.1 0.2; -0.4 1.1; 0 0.25; 0 1];
 
 fig = setup_figure([],2,.4);
 for ik = 1:4
@@ -241,11 +241,13 @@ tmp(:,:,:,2) = cat(3, q0.TIDA_perstate, q1.TIDA_perstate, q2.TIDA_perstate);
 ttl = {'Rotational momentum', 'TIDA'};
 measures = {'rotational_momentum_perstate', 'TIDA_perstate'};%, 'TIDA_perstate', 'rotational_momentum_perstate';
 if whichstudy==1 || whichstudy==2
-  yl = [-0.3 0.35; -0.05 .45];
+  yl = [-0.2 0.45; -0.05 .45];
 elseif whichstudy==3
   yl = [-0.3 0.35; -0.05 .4];
 elseif whichstudy==4
   yl = [-0.3 0.35; -0.05 .4];
+elseif whichstudy==6
+    yl = [-0.3 0.35; -0.05 .4];
 end
 
 
@@ -284,12 +286,12 @@ end
 
 %% And plot the FO asymmetries for the simulated data
 fig=setup_figure([],2,.33);
-cyclicalstateplot_perstate(bestseq,hmm_1stlevel.simulation{1}.cycle_metrics.mean_direction,hmm_1stlevel.simulation{1}.FO_pvals<(alpha/bonf_ncomparisons),[],false,color_scheme);
+cyclicalstateplot_perstate(bestseq,hmm_1stlevel.simulation{1}.cycle_metrics.mean_direction,hmm_1stlevel.simulation{1}.assym_ttest.pvals<(hmm_1stlevel.assym_ttest.alpha_thresh),[],false,color_scheme);
 save_figure([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways_simulation']);
 
 
 fig=setup_figure([],2,.33);
-cyclicalstateplot_perstate(bestseq,hmm_1stlevel.simulation_average.cycle_metrics.mean_direction,hmm_1stlevel.simulation_average.FO_pvals<(alpha/bonf_ncomparisons),[],false,color_scheme);
+cyclicalstateplot_perstate(bestseq,hmm_1stlevel.simulation_average.cycle_metrics.mean_direction,hmm_1stlevel.simulation_average.assym_ttest.pvals<(hmm_1stlevel.assym_ttest.alpha_thresh),[],false,color_scheme);
 save_figure([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways_simulation_average']);
 
 
