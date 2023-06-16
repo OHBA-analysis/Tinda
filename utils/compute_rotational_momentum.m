@@ -14,3 +14,4 @@ rotational_momentum = squeeze(rotational_momentum);
 if size(rotational_momentum,2) > size(rotational_momentum,1) && size(rotational_momentum,1)==1
   rotational_momentum = rotational_momentum';
 end
+rotational_momentum = -rotational_momentum; % positive rotational momentum should indicate clockwise cycle
