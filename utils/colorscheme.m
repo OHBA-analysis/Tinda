@@ -32,7 +32,7 @@ elseif whichstudy==3 || whichstudy==5
   for k=1:12
     color_scheme{k} = tmp(k,:);
   end
-elseif whichstudy==4
+elseif whichstudy==4 || whichstudy==6
   tmp = brewermap(12, 'Set3');
   for k=1:12
     color_scheme{k} = tmp(k,:);
