@@ -148,7 +148,7 @@ if whichstudy==1
   %%%%%%%%%%%%%%%%%%%%%
   % DISTRIBUTION PLOT %
   %%%%%%%%%%%%%%%%%%%%%
-  sigpoints = hmm_1stlevel.FO_pvals<(alpha_thresh/bonf_ncomparisons);
+  sigpoints = hmm_1stlevel.assym_ttest.pvals<(alpha_thresh/bonf_ncomparisons);
   for ii=1:12
     ax(4+ii) = axes('Position', [0.575 0.121+(12-ii)*0.031 0.1 0.022]);
     hold on
@@ -243,9 +243,10 @@ end
 
 
 % create individual plot for DMN asym
-study = {'MEGUK', 'MEGUK', 'HCP', 'CAMCAN'};
+study = {'MEGUK', 'MEGUK', 'HCP', 'CAMCAN', 'HCP task', 'CAMCAN'};
+DMN_idx = [1,1,1,1,1,1];
 fig = setup_figure([], 1,1)
-cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,find(bestseq==1),false, color_scheme);
+cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,find(bestseq==DMN_idx(whichstudy)),false, color_scheme);
 title({study{whichstudy}, 'DMN', ''})
 set_font(10, {'label', 'title'})
 save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_DMN']);
