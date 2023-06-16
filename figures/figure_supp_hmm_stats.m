@@ -2,16 +2,16 @@
 % summary plots:
 fig = setup_figure([],1,2.25);
 subplot(3,1,1)
-distributionPlot(FracOcc,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}});
+distributionPlot(hmm_1stlevel.FO,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}});
 set(gca,'YLim',[0 1.1*max(FracOcc(:))]);
 xlabel('RSN-state'), ylabel('Proportion'), title('Fractional Occupancy')
 grid on;
 
 subplot(3,1,2)
-distributionPlot(LTmerged ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
+distributionPlot(hmm_1stlevel.LT_mu ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
 title('Life Times'); xlabel('RSN-state'), ylabel('Time (ms)'),
 grid on;
-YL = 1.1*max(LTmerged(:))./ config.sample_rate * 1000;
+YL = 1.1*max(hmm_1stlevel.LT_mu(:))./ config.sample_rate * 1000;
 set(gca,'YLim',[0 YL]);
 
 subplot(3,1,3);
@@ -32,9 +32,9 @@ set(gca,'YTickLabels',y_labels);
 %}
 % print([config.figdir '0_temporalstats_IT_logscale'],'-depsc')
 
-distributionPlot(ITmerged ./ config.sample_rate*1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
+distributionPlot(hmm_1stlevel.IT_mu ./ config.sample_rate*1000,'showMM',2,'color',{color_scheme{1:size(FracOcc,2)}})
 title('Interval Times');xlabel('RSN-state'), ylabel('Time (ms)');grid on
-YL(2) =1.5* max(mean((ITmerged ./ config.sample_rate * 1000)));
+YL(2) =1.5* max(mean((hmm_1stlevel.IT_mu ./ config.sample_rate * 1000)));
 YL(1) = 0;
 set(gca,'YLim',YL)
 
