@@ -9,7 +9,7 @@ end
 
 
 clr = [{[0 0.4470 0.7410]}, {[0.8500 0.3250 0.0980]}, {[0.9290 0.6940 0.1250]}];
-study = {'MEGUK (N=55)', 'MEGUK (N=55)', 'HCP (N=79)', 'Cam-CAN (N=600)'};
+study = {'MEGUK (N=55)', 'MEGUK (N=55)', 'HCP (N=79)', 'Cam-CAN (N=600)', '', 'Cam-CAN (N=612)'};
 sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
 
 %% Figure 2 (per study)
@@ -51,7 +51,7 @@ h1 = boxplot([tmp2;nan(1,length(tmp2))]', 'Colors', 'k', 'Width', .75, 'whisker'
 % set(h, {'linew'}, {2})
 ylim(1.1*[min([min(tmp1), min(tmp2)]), max([max(tmp1), max(tmp2)])])
 sigstar({[1,2]}, hmm_1stlevel.perm.obs_vs_perm)
-xlim([-1 3.5])
+xlim([-1.5 3.5])
 box off
 xticks([1 2])
 ylabel('M')
@@ -63,37 +63,41 @@ for k=1:length(c1)
 end
 
 if whichstudy==1
-  y1 = -.1;
+  y1 = 0
   x2 = 0.785;
 elseif whichstudy==3
-  y1 = -0.09;
+  y1 = 0.09;
   x2 = 0.78;
 elseif whichstudy==4
-  y1 = -0.075;
+  y1 = 0.075;
   x2 = 0.778;
+elseif whichstudy==6
+    y1 = 0.15;
+  x2 = 0.798;
 end
-text(3.2, y1+.02, 'individual subjects')
-plot(3.2, y1-.01, '.', 'Color', clr{1}, 'MarkerSize', 10)
-text(2.8, y1+.02, 'individual perm')
-plot(2.8, y1-.02, '.', 'Color', cmap1{5}, 'MarkerSize', 10)
-plot(2.8, y1-.01, '.', 'Color', cmap1{2}, 'MarkerSize', 10)
-plot(2.8, y1, '.', 'Color', cmap1{6}, 'MarkerSize', 10)
+text(3.2, y1-.02, 'individual subjects')
+plot(3.2, y1-.03, '.', 'Color', clr{1}, 'MarkerSize', 10)
+text(2.8, y1-.02, 'individual perm')
 title('Rotational Momentum')
+plot(2.8, y1-.03, '.', 'Color', cmap1{5}, 'MarkerSize', 10)
+plot(2.8, y1-.04, '.', 'Color', cmap1{2}, 'MarkerSize', 10)
+plot(2.8, y1-.05, '.', 'Color', cmap1{6}, 'MarkerSize', 10)
+title('Rotational Momentum')
+ylim(1.1*ylim)
 
-% inset
-ax(4) = axes('Position', [x2, .16, 0.15, 0.19]), hold on
+ax(4) = axes('Position', [x2, .18, 0.15, 0.19]), hold on
 facealpha = 0.6;
 scatter(ones(size(tmp2)).*((2-1)+(rand(size(tmp2))-0.5)/2),tmp2,25, c1, 'filled', 'MarkerFaceAlpha',0.6)
 h = boxplot([tmp2]', 'Colors', 'k', 'whisker', 1000, 'Width', .75)
 set(h, {'linew'}, {2})
 xlim([0.5 1.5])
+% ylim([-0.00001 0.0001])
 xticklabels({'zoom'})
 ax(4).YAxis.Exponent = 0;
 view([90,-90])
-
 set_font(10, {'title', 'label'})
 fname = [config.figdir, 'figure2_circleplot/','2_cyclicalpattern'];
-save_figure(fname);
+save_figure(fname, false);
 
 
 %% Supplements
@@ -212,10 +216,8 @@ if strcmp(ext, 'FOasym') || strcmp(ext{1}, 'FOasym')
     ylb = 'Mean FO asymmetry';
   elseif strcmp(ext, 'rotationalmomentum') || strcmp(ext{1}, 'rotationalmomentum')
     tmp = [hmm_1stlevel.cycle_metrics.rotational_momentum, simulation{1}.cycle_metrics.rotational_momentum, simulation_average.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum;
-    ylb = {'                     clockwise \bf \leftarrow M \rightarrow \rm counterclockwise'};
+    ylb = {'M'};
   end
-  %   ax(3) = axes('Position', [0.8, 0.15, 0.15, 0.7]); hold on
-%   ax(3) = axes('Position', [0.1, 0.05, 0.45, .3]); hold on
   vline(0, '--k')
   
   clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250]};
@@ -230,12 +232,11 @@ if strcmp(ext, 'FOasym') || strcmp(ext{1}, 'FOasym')
   elseif strcmp(ext, 'rotationalmomentum') || strcmp(ext{1}, 'rotationalmomentum')
     sigstar({[1,2], [1,3]}, [hmm_1stlevel.metric_vs_sim.rotational_momentum.prob, hmm_1stlevel.metric_vs_sim_avg.rotational_momentum.prob])
   end
-  %   title({'Difference between', 'observed data and', 'simulations', ''})
   xticklabels( {'obs', '1 sim', '100 sim'})
-  %   xtickangle(45)
+
   ylabel(ylb)
   view([-270 90])
   title('Rotational Momentum vs. simulations')
   set_font(10, {'title', 'label'})
 fname = [config.figdir, 'figure2_circleplot/','2supp_RotationalMomentum_obs_vs_sim'];
-save_figure(fname);
+save_figure(fname, false);
