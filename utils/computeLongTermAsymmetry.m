@@ -1,4 +1,4 @@
-function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalpercentiles,dotaskglm, replayidx, dostat, ntiles)
+function [FO,pvals,tintervalsout, stat, FO_residual,pvals_residual, stat_res] = computeLongTermAsymmetry(vpath,T,K,intervalbins, dotaskglm, replayidx, dostat, ntiles, intervalbin_mode)
 % computes a single subject's interval FO assymettry matrix. Note will
 % return NaN if there are no intervals
 if ~iscolumn(vpath)
@@ -10,10 +10,13 @@ end
 if ~exist('ntiles', 'var') || isempty(ntiles)
     ntiles = 2; % implement this later to account for sub-elements of intervals (ie not just first half vs second half)
 end
-if nargin<4 || isempty(intervalpercentiles)
-    intervalpercentiles = [0,100];
+if nargin<4 || isempty(intervalbins)
+    intervalbins = [0,100];
 end
-if nargin<5
+if ~exist('intervalbin_mode', 'var') || isempty(intervalbin_mode)
+    intervalbin_mode = 'percentile'; % can be 'abs', 'percentile'
+end
+if ~exist('dotaskglm', 'var') || isempty(dotaskglm)
     dotaskglm = false;
 end
 if ~iscell(vpath) || ~iscell(T)
@@ -23,7 +26,7 @@ if ~exist('numperm', 'var') || isempty(numperm)
     numperm = 10^5;
 end
 
-if ~exist('dostat', 'var')
+if ~exist('dostat', 'var') || isempty(dostat)
     dostat=1;
 end
 
@@ -37,13 +40,13 @@ end
 nSj = length(vpath);
 
 if ntiles>2
-    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1, ceil(ntiles/2));
+    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalbins)-1, ceil(ntiles/2));
     dostat=false;
 else
-    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1);
+    FO = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalbins)-1);
 end
 FO_all = [];
-if dotaskglm, FO_residual = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalpercentiles)-1);
+if dotaskglm, FO_residual = zeros(K+replay_state,K+replay_state,2,nSj,length(intervalbins)-1);
 else, FO_residual=[]; end
 
 for iSj=1:nSj
@@ -123,22 +126,28 @@ for iSj=1:nSj
         %             end
         %         else
         tintervals{iSj,ik} = ontimes(2:end)-offtimes(1:end-1);
-        for ip=1:length(intervalpercentiles)-1
-            if ~any(isnan(intervalpercentiles(ip:ip+1)))
+        for ip=1:length(intervalbins)-1
+            if ~any(isnan(intervalbins(ip:ip+1)))
+                if strcmp(intervalbin_mode, 'abs')
+                    p_low = intervalbins(ip);
+                    p_high = intervalbins(ip+1)-1; % this forces it to be smaller than this value
+                else
+                    
                 if 0 % looks at percentages without zero interval lengths
                     tmp = tintervals{iSj,ik};
                     tmp(tmp==0)=[];
-                    p_low = prctile(tmp,intervalpercentiles(ip));
-                    p_high = prctile(tmp,intervalpercentiles(ip+1));
+                    p_low = prctile(tmp,intervalbins(ip));
+                    p_high = prctile(tmp,intervalbins(ip+1));
                 else
-                    p_low = prctile(tintervals{iSj,ik},intervalpercentiles(ip));
-                    p_high = prctile(tintervals{iSj,ik},intervalpercentiles(ip+1));
+                    p_low = prctile(tintervals{iSj,ik},intervalbins(ip));
+                    p_high = prctile(tintervals{iSj,ik},intervalbins(ip+1));
                 end
-            elseif isnan(intervalpercentiles(ip))
+                end
+            elseif isnan(intervalbins(ip))
                 p_low = 0;
-                p_high = intervalpercentiles(ip+1);
-            elseif isnan(intervalpercentiles(ip+1))
-                p_low = intervalpercentiles(1);
+                p_high = intervalbins(ip+1);
+            elseif isnan(intervalbins(ip+1))
+                p_low = intervalbins(1);
                 p_high = max(tintervals{iSj,ik})+1;
             end
             tempaway = [];
@@ -217,15 +226,15 @@ end
 
 if dostat
     % Do Permutation test on FO (instead of t-test)
-    pvals = zeros(K,K,length(intervalpercentiles)-1);
+    pvals = zeros(K,K,length(intervalbins)-1);
     stat=[];
     if dotaskglm
-        pvals_residual = zeros(K,K,length(intervalpercentiles)-1);
+        pvals_residual = zeros(K,K,length(intervalbins)-1);
     else
         pvals_residual=[]; stat_res=[];
     end
     if nSj>1
-        for ip=1:length(intervalpercentiles)-1
+        for ip=1:length(intervalbins)-1
             % do permutation test of FO
             
             [pvals(:,:,ip), stat{ip}] = FO_permutation_test(FO(:,:,:,:,ip), K, nSj, numperm);
