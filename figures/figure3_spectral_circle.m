@@ -2,7 +2,7 @@
 local_clim=true;
 diffmode = {'rel'}; % whether to plot psd/coh relative to average over states
 use_sqrt_f = [true];%[true, false] ; % whether to plot PSD/coh with sqrt of f axis
-statecolor = [true, false]; % whether to plot PSD/coh in the state color
+statecolor = [true]%, false]; % whether to plot PSD/coh in the state color
 parc = config.parc;
 mni_coords =  config.parc.roi_centers;
 clear yl tmp*
@@ -149,15 +149,19 @@ for whichtopo = 1:2%3
           plot_surface_4way(parc,toplot,1,true,'trilinear', [],CL(1)-0.1,CL, ax(k,1))
         elseif  strcmp(do_pow_or_coh, 'coh')
           ax(k,1) = axes('Position', [0.01 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.08 0.08]);
-          [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], th);axis off
+          [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], 95);axis off
         end
         colormap(hotcold)
       end
       ax(11,1) = axes('Position', [0.365, 0.38, 0.25, 0.25]); hold on
       clear l
       for k=1:K
-        scatter(log10(squeeze(nanmean(nanmean((psd(:,k,:,:)),4),3))), log10(squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),4),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
-        l{k} = sprintf('State %d', k);
+          if use_WB_nnmf
+            scatter((squeeze((nanmean((psd_wb(:,k,:)),1)))), (squeeze(nanmean(nanmean(coh_wb(:,k,:,:),1),4))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+          else
+            scatter((squeeze(nanmean(nanmean((psd(:,k,:,:)),1),3))), (squeeze(nanmean(nanmean(coh(:,k,:,offdiagselect),1),3))),15, 'MarkerFaceColor', color_scheme{k}, 'MarkerEdgeColor', 'None', 'MarkerFaceAlpha', 0.7);
+          end
+          l{k} = sprintf('State %d', k);
       end
       % axis off
       box off
@@ -167,8 +171,13 @@ for whichtopo = 1:2%3
       xlabel('PSD')
       box off
       axis square
-      xlim(log10([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
-      ylim(log10([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
+      if use_WB_nnmf
+          xlim(([min(min((squeeze(nanmean((psd_wb),1)))))*0.95, max(max((squeeze(nanmean((psd_wb),1)))))*1.05]))
+          ylim(([min(min((squeeze(nanmean(nanmean((coh_wb),4),1)))))*.95, max(max((squeeze(nanmean(nanmean((coh_wb),4),1)))))*1.05]))
+      else
+          xlim(([min(min((squeeze(nanmean(nanmean((psd),4),3)))))*0.95, max(max((squeeze(nanmean(nanmean((psd),4),3)))))*1.05]))
+          ylim(([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
+      end
       set_font(10, {'label', 'title'})
       save_figure([config.figdir, 'figure3_spectral_circle/','3_Spectral_circle_', do_pow_or_coh, sup1, sup2], false)
     end
