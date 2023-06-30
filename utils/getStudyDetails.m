@@ -34,11 +34,12 @@ elseif whichstudy==2
   config.sample_rate = 250;
   config.prepdatafile = [config.hmmfolder,'hmm_parc_giles_symmetric__pcdim80_voxelwise_embed14.mat'];
   config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'coherence'; % can be 'replay' (originally)
+  config.reordering_states = 'coherence'; % can be 'replay' (originally), 'study1matched'
   
 elseif whichstudy==3
   % this is the best of five models run on HCP data
   config.nSj = 237/3;
+  config.nSes=3;
   config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
   config.hmmfilename = 'hmm_analysis2.mat';
   config.participantcovariates = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/HCPAnalysis/behav/';
@@ -59,7 +60,7 @@ elseif whichstudy==3
   %     config.parc.weight_mask = newweightmask;
   config.sample_rate = 240;
   %    config.Poiss_dir
-  config.reordering_states = 'coherence'; %
+  config.reordering_states = 'study1matched'; %
   
 elseif whichstudy==4 % this the CamCan model fit:
     basedir='/ohba/pi/mwoolrich/datasets/CamCan_2021';
@@ -75,7 +76,7 @@ elseif whichstudy==4 % this the CamCan model fit:
   config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
   config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
   config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'coherence'; 
+  config.reordering_states = 'study1matched'; 
 elseif whichstudy==5
   config.nSj = 237/3;
   config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
@@ -88,9 +89,9 @@ elseif whichstudy==5
   config.storymfilelist = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study5/ve_output_StoryM_matfiles/filelist.mat';
   config.sample_rate=240;
   config.metricfile = [config.resultsdir, 'HMMsummarymetrics'];%[config.hmmfolder,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'coherence'; % can be 'replay' (originally)
+  config.reordering_states = 'study1matched'; % can be 'replay' (originally)
 elseif whichstudy==6 % this is Chet's CamCan model fit:
-  basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study4/ChetFit/';
+  basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study6/';
   config.resultsdir=basedir;
   config.figdir = [config.resultsdir, 'figures/'];
   config.nSj = 612;
@@ -105,7 +106,31 @@ elseif whichstudy==6 % this is Chet's CamCan model fit:
   config.secondlevelmodelfile = fullfile(basedir, 'secondLevelHMM_stoch_Poiss_window125_K3_overlappingWindows.mat');
   config.Poiss_dir = fullfile(basedir, 'Poissdata_125_overlappingWindows/');
   config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'coherence'; 
+  config.reordering_states = 'study1matched'; 
+elseif whichstudy==7 % Python WakeHen fit
+    basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study7/';
+  config.nSj = 19;
+  config.nSes = 6;
+  config.sample_rate = 250;
+  config.hmmfolder = basedir;
+  config.hmmfilename = [];
+  config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
+  config.sample_rate = 250;
+  config.prepdatafile = [];
+  config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+  config.reordering_states = 'study1matched'; % can be 'replay' (originally), 'study1matched'
+  elseif whichstudy==8 % Python CamCan fit, refitted on WakeHen 
+    basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study8/';
+  config.nSj = 19;
+  config.nSes = 6;
+  config.sample_rate = 250;
+  config.hmmfolder = basedir;
+  config.hmmfilename = [];
+  config.parc = parcellation('fmri_d100_parcellation_with_PCC_reduced_2mm_ss5mm_ds8mm.nii.gz');
+  config.sample_rate = 250;
+  config.prepdatafile = [];
+  config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
+  config.reordering_states = 'study1matched'; % can be 'replay' (originally), 'study1matched'
 end
 
 if isfolder('/Applications')

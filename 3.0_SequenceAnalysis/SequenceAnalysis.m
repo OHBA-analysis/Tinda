@@ -21,20 +21,27 @@ useMT = true; % use the MT results instead of Cam's wavelet approach
 
 %% Load HMM results
 % first load data and plot basic temporal statistics:
-if whichstudy==6
-    hmm.K=12;
+clear new_state_ordering
+if isempty(config.reordering_states)
+    new_state_ordering=1:hmm.K;
 else
-    temp = load(fullfile(config.hmmfolder,config.hmmfilename));
-    
-    fname_stateorder = 'coherence_state_ordering';
+    fname_stateorder = [config.reordering_states, '_state_ordering'];
     if useMT
         if use_WB_nnmf
             fname_stateorder = [fname_stateorder, '_MT_nnmf'];
         else
             fname_stateorder = [fname_stateorder, '_MT'];
         end
+        load([config.resultsdir, fname_stateorder])
     end
-    
+end
+
+
+if whichstudy>=6
+    hmm.K=12;
+else
+    temp = load(fullfile(config.hmmfolder,config.hmmfilename));
+
     hmm = temp.hmm;
     if ~isfield(hmm,'gamma') && whichstudy<4
         hmm.gamma = temp.Gamma;
@@ -44,21 +51,13 @@ else
         %load(config.prepdatafile,'hmmT','subj_inds');
         if strcmp(config.reordering_states, 'replay')
             new_state_ordering = temp.new_state_ordering;
-        elseif strcmp(config.reordering_states, 'coherence')
-            load([config.resultsdir, fname_stateorder])
-        else
-            new_state_ordering=1:hmm.K;
         end
+
         hmm = hmm_permutestates(hmm, new_state_ordering);
         for i=1:config.nSj
             hmmT{i} = sum(hmm.subj_inds==i);
         end
     elseif whichstudy==3
-        if strcmp(config.reordering_states, 'coherence')
-            load([config.resultsdir, fname_stateorder])
-        else
-            new_state_ordering=1:hmm.K;
-        end
         hmm = hmm_permutestates(hmm, new_state_ordering);
         hmmT = temp.T_all;
         hmm.subj_inds = zeros(size(hmm.statepath));
@@ -77,11 +76,6 @@ else
         hmmT = hmmTsubj;
         clear hmmTsubj hmmTold;
     elseif whichstudy==4
-        if strcmp(config.reordering_states, 'coherence')
-            load([config.resultsdir, fname_stateorder])
-        else
-            new_state_ordering=1:hmm.K;
-        end
         hmm = hmm_permutestates(hmm, new_state_ordering);
         hmmT = temp.T_all;
         % correct for embedded lags:
@@ -109,12 +103,7 @@ opts = [];
 opts.K = 12;
 opts.Fs = config.sample_rate;
 opts.dropstates=0;
-if whichstudy==6
-    fname = [config.resultsdir, 'coherence_state_ordering'];
-    if use_WB_nnmf
-        fname = [fname, '_MT_nnmf'];
-    end
-    load(fname)
+if whichstudy>=6
     q=load([config.resultsdir, 'vpath']);
     vpath=cellfun(@(x) x+1, cellfun(@double, cellfun(@transpose, q.vpath, 'UniformOutput', false), 'UniformOutput',false), 'UniformOutput', false);
     for k=1:numel(vpath)
@@ -124,12 +113,25 @@ if whichstudy==6
             tmp(tmp==new_state_ordering(k2)+100) = k2;
         end
         vpath{k} = tmp;
+        if ~isfield(q, 'T') || length(q.T)~=length(q.vpath)
+            q.T(k) = length(vpath{k});
+        end
     end
     hmmT = num2cell(q.T);
     clear q
+    if whichstudy==7 || whichstudy==8
+        hmmT_ses = hmmT;
+        vpath_ses = vpath;
+        tmp = reshape(vpath, [config.nSes, config.nSj]);
+        clear vpath hmmT
+        for k=1:size(tmp,2)
+            vpath{k} = cat(1,tmp{:,k});
+            hmmT{k} = length(vpath{k});
+        end
+    end
 end
 for subnum=1:config.nSj
-    if whichstudy~=6
+    if whichstudy<6
         fprintf(['\nProcessing subj ',int2str(subnum)]);
         if whichstudy~=4
             vpath{subnum} = hmm.statepath(hmm.subj_inds==subnum);
@@ -155,10 +157,24 @@ for subnum=1:config.nSj
     LTmedian(subnum,:) = cellfun(@median,LT);
     LTstd(subnum,:) = cellfun(@std,LT);
     FracOcc(subnum,:) = getFractionalOccupancy(vpath{subnum},sum(hmmT{subnum}),opts);
-    IT = getStateIntervalTimes(vpath{subnum},hmmT{subnum},opts);
+        IT = getStateIntervalTimes(vpath{subnum},hmmT{subnum},opts);
     ITmerged(subnum,:) = cellfun(@mean,IT);
     ITmedian(subnum,:) = cellfun(@median,IT);
     ITstd(subnum,:) = cellfun(@std,IT);
+    if whichstudy==7 || whichstudy==8
+      for iSes=1:config.nSes
+        FracOcc_ses(subnum,iSes,:) = getFractionalOccupancy(vpath_ses{(subnum-1)*config.nSes+iSes},sum(hmmT_ses{(subnum-1)*config.nSes+iSes}),opts);
+        LT_ses = getStateLifeTimes(vpath_ses{(subnum-1)*config.nSes+iSes},hmmT_ses{(subnum-1)*config.nSes+iSes},opts);
+        LTmerged_ses(subnum,iSes,:) = cellfun(@mean,LT_ses);
+        LTmedian_ses(subnum,iSes,:) = cellfun(@median,LT_ses);
+        LTstd_ses(subnum,iSes,:) = cellfun(@std,LT_ses);
+        IT_ses = getStateIntervalTimes(vpath_ses{(subnum-1)*config.nSes+iSes},hmmT_ses{(subnum-1)*config.nSes+iSes},opts);
+        ITmerged_ses(subnum,iSes,:) = cellfun(@mean,IT_ses);
+        ITmedian_ses(subnum,iSes,:) = cellfun(@median,IT_ses);
+        ITstd_ses(subnum,iSes,:) = cellfun(@std,IT_ses);
+      end
+    end
+
 end
 
 % save key metrics to look at covariates later:
@@ -170,11 +186,23 @@ hmm_1stlevel.LT_std = LTstd;
 hmm_1stlevel.IT_mu = ITmerged;
 hmm_1stlevel.IT_med = ITmedian;
 hmm_1stlevel.IT_std = ITstd;
-
+if whichstudy==7 ||whichstudy==8
+  hmm_1stlevel.per_ses.FO = FracOcc_ses;
+  hmm_1stlevel.per_ses.LT_mu = LTmerged_ses;
+  hmm_1stlevel.per_ses.LT_med = LTmedian_ses;
+  hmm_1stlevel.per_ses.LT_std = LTstd_ses;
+  hmm_1stlevel.per_ses.IT_mu = ITmerged_ses;
+  hmm_1stlevel.per_ses.IT_med = ITmedian_ses;
+  hmm_1stlevel.per_ses.IT_std = ITstd_ses;
+end
 %% load MT PSDs for each state:
 diagselect = find(eye(config.parc.n_parcels));
 offdiagselect = find(~eye(config.parc.n_parcels));
-fname = [config.resultsdir, 'coherence_state_ordering'];
+if whichstudy==1
+    fname = [config.resultsdir, 'coherence_state_ordering'];
+else
+    fname = [config.resultsdir, 'study1matched_state_ordering';];
+end
 
 loadHMMspectra_MT
 
@@ -194,6 +222,10 @@ for whichstate = 1:K
     end
 end
 clear C tmp1
+
+group_avg_coh_wb = squeeze(mean(coh_wb));
+group_avg_psd_wb = squeeze(mean(psd_wb));
+save([config.resultsdir, 'group_avg_spectral_maps.mat'], 'group_avg_coh_wb', 'group_avg_psd_wb')
 
 %% Compute long term assymetry:
 [FO_intervals,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
@@ -230,12 +262,15 @@ hmm_1stlevel.assym_ttest.sigpoints = hmm_1stlevel.assym_ttest.pvals<alpha_thresh
 [FO_group,~,~] = computeLongTermAsymmetry({cat(1,vpath{:})},{squash(cat(2,hmmT{:}))},K);
 hmm_1stlevel.FO_intervals_group = FO_group;
 
+
 %% Find the optimial ordering
 % this script determines the optimal state ordering for a circular plot; it
 % then determines whether such a sequentially organised network could arise
 % by chance by random shuffles of the rows of the transmat
 if strcmp(config.reordering_states, 'coherence')
     optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
+elseif strcmp(config.reordering_states, 'study1matched')
+    optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_study1matched' ,'.mat'];
 else
     optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
 end
@@ -257,10 +292,17 @@ angleplot = circle_angles(bestseq);
 
 hmm_1stlevel.cycle_metrics = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
 
+hmm_1stlevel.cycle_metrics_no_ordering = compute_tinda_metrics(config, [1 12:-1:2], circle_angles([1 12:-1:2]), FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
 
+clear a
+hmm_1stlevel.metric_vs_no_ordering=[];
+[a.h, a.pvals, a.ci, a.stat] = ttest(hmm_1stlevel.cycle_metrics.rotational_momentum, hmm_1stlevel.cycle_metrics_no_ordering.rotational_momentum, 'Tail', 1);
+hmm_1stlevel.metric_vs_no_ordering.rotational_momentum = a;
+
+clear a
 % compute cycle_metrics per session
-if whichstudy==3
-    for iSes=1:3
+if whichstudy==3 
+    for iSes=1:config.nSes
         for iSj=1:config.nSj
             tmp = cumsum(hmmT{iSj});
             vpath_ses{iSj, iSes} = vpath{iSj}(1+tmp(iSes)-hmmT{iSj}(iSes) : tmp(iSes));
@@ -279,13 +321,20 @@ if whichstudy==3
         hmm_1stlevel.tinda_per_ses{iSes}.assym_ttest = b;
         hmm_1stlevel.tinda_per_ses{iSes}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, a.FO_intervals, b.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme);
     end
+elseif whichstudy==7
+  for iSes=1:config.nSes
+    [FO_intervals_ses,~,t_intervals_ses,~] = computeLongTermAsymmetry(vpath_ses(iSes:config.nSes:end),hmmT_ses(iSes:config.nSes:end),K,[],[],[],false);
+    hmm_1stlevel.per_ses.FO_intervals(:,:,:,iSes,:) = FO_intervals_ses;
+    hmm_1stlevel.per_ses.t_intervals(iSes,:,:) = t_intervals_ses;
+    hmm_1stlevel.per_ses.cycle_metrics(iSes) = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals_ses, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
+  end
 end
 
 
 
 %% Run TINDA on permuted state labels
 rng(42);
-nperm = 100;
+nperm = 1000;
 for iperm=1:nperm
     iperm
     for k=1:length(vpath)
@@ -297,7 +346,7 @@ for iperm=1:nperm
     end
     [FO_intervals_perm{iperm},FO_pvals_perm{iperm},~,FO_stat_perm{iperm}] = computeLongTermAsymmetry(vpath_perm,hmmT,K);
     bestsequencemetrics_perm{iperm} = optimiseSequentialPattern(FO_intervals_perm{iperm});
-    angleplot_perm = circle_angles(bestsequencemetrics_perm{iperm}{2});
+    angleplot_perm = circle_angles(bestsequencemetrics_perm{iperm}{1});
     FO_assym_perm = squeeze((FO_intervals_perm{iperm}(:,:,1,:)-FO_intervals_perm{iperm}(:,:,2,:))./mean(FO_intervals_perm{iperm},3));
     rotational_momentum_perm(iperm,:) = compute_rotational_momentum(angleplot_perm, FO_assym_perm);
 end
@@ -306,7 +355,7 @@ hmm_1stlevel.perm = [];
 hmm_1stlevel.perm.FO_intervals = FO_intervals_perm;
 hmm_1stlevel.perm.assym_permtest.pvals = FO_pvals_perm;
 hmm_1stlevel.perm.assym_permtest.stat = FO_stat_perm;
-for k=1:100
+for k=1:nperm
     a=[];
     for i=1:K
         for j=1:K
@@ -317,15 +366,69 @@ for k=1:100
 end
 hmm_1stlevel.perm.bestsequencemetrics = bestsequencemetrics_perm;
 hmm_1stlevel.perm.rotational_momentum = rotational_momentum_perm;
-hmm_1stlevel.perm.obs_vs_perm = max([1./(nperm+1), sum(mean(rotational_momentum_perm,2)<mean(hmm_1stlevel.cycle_metrics.rotational_momentum))]);
+hmm_1stlevel.perm.obs_vs_perm = max([1./(nperm+1), (sum(mean(hmm_1stlevel.perm.rotational_momentum ,2)>mean(hmm_1stlevel.cycle_metrics.rotational_momentum)))/nperm]);
+
+hmm_1stlevel.perm.obs_no_ordering_vs_perm = max([1./(nperm+1), (sum(mean(hmm_1stlevel.perm.rotational_momentum ,2)>mean(hmm_1stlevel.cycle_metrics_no_ordering.rotational_momentum)))/nperm]);
 
 
 %% Run TINDA on the vpath simulated from the transprob matrix.
 SequenceAnalysis_transprob_simulations
 % saved in hmm_1stlevel.FO_state_simulation
-SequenceAnalysis_transprob_simulations
+
+%% Run TINDA with regressing out trial effects
+if whichstudy==7 || whichstudy==8
+  load([config.resultsdir, 'wakehen_events_badseg_adapted.mat'])
 
 
+  % trigger info:
+  % 5-7: Famous face
+  % 13-15: Unfamiliar face
+  % 17-19: Scrambled face
+  
+  tmp = cat(1,events{:});
+  event_codes = unique(tmp(:,3));
+  vis_events = [5:7, 13:15, 17:19];
+  mot_events = setdiff(event_codes, vis_events)';
+  
+  % average reaction time 932 ms
+  % we want minimal overlap between the two windows
+  event_twindow = {[0, 125], [-125, 75]};
+  baseline_twindow = {[-26, -1], [-151 -126]}; 
+  event_grouping = {vis_events, mot_events}; % first one is visual, second one button press
+  for j=1:length(event_grouping)
+      event_id = event_grouping{j};
+      for k=1:length(events)
+          % only take events with these IDs 5:7, 13:15, 17:19
+          idx = find(any(events{k}(:,3)==event_id,2));
+          grouped_events{j,k} = events{k}(idx, [1 3]);
+            
+          % remove events at the border
+          id = grouped_events{j,k}(:,1)<(-event_twindow{j}(1)) | grouped_events{j,k}(:,1)>=length(vpath_ses{k})-event_twindow{j}(2);
+          grouped_events{j,k} = grouped_events{j,k}(~id,:);
+      end
+  end
+  trialdef = [];
+  trialdef.events = grouped_events;
+  trialdef.twindow = event_twindow;
+  trialdef.baseline = baseline_twindow;
+    
+  % correct for both visual and motor erf
+  [FO_intervals,~,~,~, FO_residual] = computeLongTermAsymmetry(vpath_ses,hmmT_ses,K,[],true, trialdef,false);
+  
+  hmm_1stlevel.per_ses.trial_glm.FO_intervals = reshape(FO_residual, [K,K,2,config.nSes, config.nSj]);
+  hmm_1stlevel.trial_glm.FO_intervals = squeeze(mean(hmm_1stlevel.per_ses.trial_glm.FO_intervals,4));
+  a=[];
+  for i=1:K
+    for j=1:K
+      [a.h(i,j), a.pvals(i,j), a.ci(i,j,:), a.stat(i,j)] = ttest(squeeze(hmm_1stlevel.trial_glm.FO_intervals(i,j,1,:)), squeeze(hmm_1stlevel.trial_glm.FO_intervals(i,j,2,:)));
+    end
+  end
+  hmm_1stlevel.trial_glm.assym_ttest = a;
+  hmm_1stlevel.trial_glm.assym_ttest.alpha_thresh = alpha_thresh;
+  hmm_1stlevel.trial_glm.assym_ttest.sigpoints = hmm_1stlevel.trial_glm.assym_ttest.pvals<alpha_thresh;
+  hmm_1stlevel.trial_glm.bestsequencemetrics = optimiseSequentialPattern(hmm_1stlevel.trial_glm.FO_intervals);
+  hmm_1stlevel.trial_glm.cycle_metrics = compute_tinda_metrics(config, hmm_1stlevel.trial_glm.bestsequencemetrics{1}, circle_angles(hmm_1stlevel.trial_glm.bestsequencemetrics{1}), hmm_1stlevel.trial_glm.FO_intervals, hmm_1stlevel.trial_glm.assym_ttest.sigpoints, color_scheme);
+end
 
 %% plot HMM summary statistics
 figure_supp_hmm_stats
@@ -351,17 +454,16 @@ figure2_circleplot
 figure_supp_tinda_metrics
 
 
+%% Figure 2 supplement:  analyse by quintiles
+figure_supp_tinda_quintiles
+
 if whichstudy==1
-    %% Figure 2 supplement:  analyse by quintiles
-    figure_supp_tinda_quintiles
-    
-    
-    %% Figure Supplement 2: analyse by intervals >2 heartbeats long
-    figure_supp_tinda_heartbeat
-    
-    
-    %% Figure 2 supplement: analyse intervals <half a respiratory cycle
-    figure_supp_tinda_respiration
+%% Figure Supplement 2: analyse by intervals >2 heartbeats long
+figure_supp_tinda_heartbeat
+
+
+%% Figure 2 supplement: analyse intervals <half a respiratory cycle
+figure_supp_tinda_respiration
 end
 
 %% save metrics
@@ -382,3 +484,9 @@ figure3_spectral_circle
 outname = [config.resultsdir, 'TINDA.avi'];
 tinda_movie(bestseq, mean_direction, sigpoints, f, psd, coh, outname)
 %}
+
+%% Compare studies
+figure_supp_state_pathways
+
+% states are matched to study 1. How well do the circle plots reproduce?
+
