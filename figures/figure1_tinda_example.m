@@ -7,7 +7,6 @@ if whichstudy==1
     whichstate=2;
   end
   fprintf(['\n Subject: ',int2str(iSj), ', State: ' int2str(whichstate)]);
-  sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
   % load raw data
   D = spm_eeg_load(replace(hmm.data_files{iSj}, '/Users/chiggins/data/YunzheData/Replaydata4Cam/WooliePipeline/spm/', '/ohba/pi/mwoolrich/datasets/ReplayData/Neuron2020Analysis/'));
   
@@ -51,6 +50,7 @@ if whichstudy==1
   s1 = [find(diff(q)==1)+1 find(diff(q)==-1)];
   mn = min(min(D(1:8,t_segment)));
   mx = max(max(D(1:8,t_segment)));
+
   
   %   plot_Gamma(Gamma_subj(t_segment,:), t_segment, true,false,[]), colororder(cat(1,color_scheme{:}))
   %   a = gca;
@@ -73,8 +73,27 @@ if whichstudy==1
   ax(1).YAxis.Label.Color=[0 0 0];
   set(ax(1),'YTick',[]);
   axis off
+  xl = xlim;
   text(ax(1).Position(1)-0.3, ax(1).Position(2)+0.05, {'Resting', 'state', 'data'}, 'Units', 'normalized', 'HorizontalAlignment', 'center', 'FontSize', 10)
   
+  
+  % curly bracket
+  tmp = 1/250:1/250:(length(t_segment)/250);
+  drawbrace([tmp(s1(2,2)), 1.35*mx],[tmp(s1(3,1)), 1.35*mx], .2, 'color', 'k')
+  
+  ax(30) = axes('Position', [.1 .55 .25 .35]); box off, axis off
+  title({'', '\it T_i'}, 'FontSize', 12, 'FontWeight', 'bold')
+
+% add dotted line
+  ax(28) = axes('Position', [.1 .5 .24 .1]); axis off, box off
+  for is = 1:size(s1,1)
+      vline(mean(s1(is,:)), '--b')
+  end
+  xlim([1 length(t_segment)])
+    
+
+
+
   %%%%%%%%%%%%%%
   % VPATH PLOT %
   %%%%%%%%%%%%%%
@@ -104,7 +123,7 @@ if whichstudy==1
   xlabel('Time');
   ax(2).YAxis.Label.Color=[0 0 0];
   ylim(yl)
-  title('HMM state timecourse', 'HorizontalAlignment', 'center')
+  title({'HMM state', 'timecourse'}, 'HorizontalAlignment', 'center')
   %   title('FO', 'HorizontalAlignment', 'center')
   %   title('\boldmath$FO^T$', 'Interpreter', 'Latex', 'FontSize', 10)
   
@@ -148,7 +167,7 @@ if whichstudy==1
   %%%%%%%%%%%%%%%%%%%%%
   % DISTRIBUTION PLOT %
   %%%%%%%%%%%%%%%%%%%%%
-  sigpoints = hmm_1stlevel.assym_ttest.pvals<(alpha_thresh/bonf_ncomparisons);
+  sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
   for ii=1:12
     ax(4+ii) = axes('Position', [0.575 0.121+(12-ii)*0.031 0.1 0.022]);
     hold on
@@ -189,7 +208,9 @@ if whichstudy==1
   ax(25) = axes('Position', [0.70 0.3500 0.3 0.145]); axis off
   title('TINDA', 'FontSize', 10)
   ax(17) = axes('Position', [0.70 0.0500 0.3 0.4]);
-  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,sigpoints,find(bestseq==whichstate),false);
+  sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
+  sigpoints(setdiff(1:K, whichstate),:) = 0;
+  cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,sigpoints,find(bestseq==whichstate), false);
   % seq=[12:-1:1];
 %     cyclicalstateplot_perstate(seq,mean_direction,sigpoints,find(seq==whichstate),false);
   
@@ -197,12 +218,12 @@ if whichstudy==1
   %%%%%%%%%%%
   % PSD MAP %
   %%%%%%%%%%%
-  ax(18) = axes('Position',[0.34        0.8 0.175 0.2] ); % top left
-  ax(19) = axes('Position',[0.34+0.185  0.8  0.175 0.2] ); % top right
-  ax(20) = axes('Position',[0.34+0.025  0.6  0.175 0.2] ); % bottom left
-  ax(21) = axes('Position',[0.34+0.16   0.6  0.175 0.2] ); % bottom right
-  ax(26) = axes('Position', [0.37 0.80 0.3 0.15]); axis off
-  title('PSD', 'FontSize', 10)
+  ax(18) = axes('Position',[0.385        0.77 0.125 0.2] ); % top left
+  ax(19) = axes('Position',[0.36+0.16  0.77  0.125 0.2] ); % top right
+  ax(20) = axes('Position',[0.36+0.025  0.57  0.125 0.2] ); % bottom left
+  ax(21) = axes('Position',[0.36+0.16   0.575  0.125 0.2] ); % bottom right
+  ax(26) = axes('Position', [0.365 0.80 0.3 0.15]); axis off
+  title('Power', 'FontSize', 10)
     pow_topo = pow_state_topo{whichstate};
 
   toplot = (pow_topo)./(powAvg_topo) - 1;%-mean(net_mean,2);
@@ -212,38 +233,49 @@ if whichstudy==1
     CL = max(abs(squash((squeeze(nanmean(nanmean((psd(:,:,:,:)),3),1))))))*[-1, 1];%[min(squash(net_mean(:,:))) max(squash(net_mean(:,:)))]
   end
   psdthresh=CL(1)-.1;%min(net_mean(:))*0.9; % lowest value
-  f2 = plot_surface_4way(parc,toplot,0,false,'trilinear',[],psdthresh,CL,ax(18:21));
+  CL = [CL(2)/3 1.1*CL(2)];
+  f2 = plot_surface_4way(parc,toplot,0,false,'trilinear',[],psdthresh,CL,ax(18:21)); % cubic, enclosing, trilinear
   
+%% color bar
+ax(29) = axes('Position',[.4775 0.73 0.075 0.2]); box off, axis off
+h=colorbar('south');
+% h.Limits = [0 CL(2)];
+% h.Ticks = [0 CL(2)];
+h.Ticks = [0 1];
+h.TickLabels = {'0', num2str(round(100*CL(2)))};
+h.Ruler.TickLabelRotation = 0;
+
+
   %%%%%%%%%%%%%%%%%
   % COHERENCE MAP %
   %%%%%%%%%%%%%%%%%
-  ax(22) = axes('Position',[0.63+0.02 0.765 0.24 0.24] ); % left
-  ax(23) = axes('Position',[0.63+0.18  0.765 0.24 0.24] ); % right
-  ax(24) = axes('Position',[.74 0.6 0.22 0.22]);% bottom
+  ax(22) = axes('Position',[0.63+0.039 0.745 0.22 0.225] ); % left
+  ax(23) = axes('Position',[0.63+0.184  0.745 0.22 0.225] ); % right
+  ax(24) = axes('Position',[.74 0.57 0.22 0.22]);% bottom
   
   graph = coh_state_topo{whichstate};
-  [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, cohAvg_topo, [], [], 95);
+  [~, ax(22:24), ~] = plot_coh_topo(ax(22:24), mni_coords, graph, cohAvg_topo, [1 2], [], 95);
 
   ax(27) = axes('Position', [0.7 0.80 0.3 0.15]); axis off
-  title('Coh', 'FontSize', 10, 'HorizontalAlignment', 'center')
+  title('Coherence', 'FontSize', 10, 'HorizontalAlignment', 'center')
   
   
   % change colormap for power
-  for ii=18:21
-    colormap(ax(ii), hotcold)
+  for ii=[18:21, 29]
+    colormap(ax(ii), hot)
   end
   
   %%%%%%%%%%%%
   % SAVE FIG %
   %%%%%%%%%%%%%
   set_font(10, {'label', 'title'})
-  save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_example_state',int2str(whichstate)]);
+  save_figure(fig, [config.figdir, 'figure1_tinda_example/', '1_tinda_example_state',int2str(whichstate)]);
   %   close
 end
 
 
 % create individual plot for DMN asym
-study = {'MEGUK', 'MEGUK', 'HCP', 'CAMCAN', 'HCP task', 'CAMCAN'};
+study = {'MEG UK', 'MEG UK', 'HCP', 'Cam-CAN', 'HCP task', 'Cam-CAN'};
 DMN_idx = [1,1,1,1,1,1];
 fig = setup_figure([], 1,1)
 cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,find(bestseq==DMN_idx(whichstudy)),false, color_scheme);
