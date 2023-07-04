@@ -273,12 +273,13 @@ h.Ruler.TickLabelRotation = 0;
   %   close
 end
 
-
-% create individual plot for DMN asym
+%% create individual plot for DMN asym
 study = {'MEG UK', 'MEG UK', 'HCP', 'Cam-CAN', 'HCP task', 'Cam-CAN'};
 DMN_idx = [1,1,1,1,1,1];
 fig = setup_figure([], 1,1)
-cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,find(bestseq==DMN_idx(whichstudy)),false, color_scheme);
+sigpoints = hmm_1stlevel.assym_ttest.sigpoints;
+sigpoints(setdiff(1:K, DMN_idx(whichstudy)),:) = 0;
+cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,sigpoints,find(bestseq==DMN_idx(whichstudy)),false, color_scheme);
 title({study{whichstudy}, 'DMN', ''})
 set_font(10, {'label', 'title'})
 save_figure(fig, [config.figdir, 'figure1_tinda_example/', '/1_tinda_DMN']);
