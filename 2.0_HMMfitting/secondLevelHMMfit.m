@@ -14,24 +14,24 @@ if whichstudy==6
     K=12;
     hmm.K=K;
     if whichstudy==6
-    fname = [config.resultsdir, 'coherence_state_ordering'];
-    if use_WB_nnmf
-        fname = [fname, '_MT_nnmf'];
-    end
-    load(fname)
-    q=load([config.resultsdir, 'vpath']);
-    vpath=cellfun(@(x) x+1, cellfun(@double, cellfun(@transpose, q.vpath, 'UniformOutput', false), 'UniformOutput',false), 'UniformOutput', false);
-    for k=1:numel(vpath)
-        k
-        tmp = vpath{k}+100;
-        for k2=1:K
-            tmp(tmp==new_state_ordering(k2)+100) = k2;
+        fname = [config.resultsdir, 'study1matched_state_ordering'];
+        if use_WB_nnmf
+            fname = [fname, '_MT_nnmf'];
         end
-        vpath{k} = tmp;
+        load(fname)
+        q=load([config.resultsdir, 'vpath']);
+        vpath=cellfun(@(x) x+1, cellfun(@double, cellfun(@transpose, q.vpath, 'UniformOutput', false), 'UniformOutput',false), 'UniformOutput', false);
+        for k=1:numel(vpath)
+            k
+            tmp = vpath{k}+100;
+            for k2=1:K
+                tmp(tmp==new_state_ordering(k2)+100) = k2;
+            end
+            vpath{k} = tmp;
+        end
+        hmmT = num2cell(q.T);
+        clear q
     end
-    hmmT = num2cell(q.T);
-    clear q
-end
 else
 temp = load(fullfile(config.hmmfolder,config.hmmfilename));
 
@@ -141,7 +141,9 @@ T_poiss = [];
 X_poiss = [];
 Poiss_subj_inds = [];
 t_last = 0;
-
+  simulation=1;
+  
+  
 if Noverlap~=0
   overlapstring='_overlappingWindows';
 end
@@ -150,7 +152,11 @@ for iSj=1:config.nSj
   %sjind = 1+ (iSj-1)*3;
   %TSj{iSj} = cell2mat(T_all(sjind:(sjind+2)));
   %TSj{iSj} = TSj{iSj} - 14; % account for delay embedding
+  
+  
   vpTemp = vpath{iSj};%((t_last+1) : t_last+sum(TSj{iSj}));
+
+
   t_last = t_last + sum(hmmT{iSj});
   fprintf(['\nProcessing subject ',int2str(iSj)]);
   if whichstudy>=4 %reset for each subject and save, rather than concatenate
@@ -182,7 +188,13 @@ for iSj=1:config.nSj
       for k=1:hmm.K
         temp2(:,k)=sum(temp==k,1);
       end
+% FIXME TEMPORARY 
+  if 0%simulation
+      perm{iSj} = randperm(12);
+      X_poiss = [X_poiss;temp2(:, perm{iSj})];
+  else
       X_poiss = [X_poiss;temp2];
+  end
       Poiss_subj_inds = [Poiss_subj_inds;repmat(iSj,T_poiss(end),1)];
     else
       T_poiss(end)=[];
@@ -215,12 +227,12 @@ for iSj=1:config.nSj
 end
 
 
-% if whichstudy==4
-%   save([config.figdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');% originally config.hmmdir
-% elseif whichstudy==5
-%   mkdir([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring])
-%   save([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
-% end
+if whichstudy==4 || whichstudy==6
+  save([config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');% originally config.hmmdir
+elseif whichstudy==5
+  mkdir([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring])
+  save([config.figdir,'TASK_Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
+end
 
 % % optionally for large datasets save to individual files:
 % n_runs = 10;
@@ -638,46 +650,88 @@ end
 
 
 %% Also Plot the metastate profile
+% make plots:
+if strcmp(config.reordering_states, 'coherence')
+    optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
+
+elseif strcmp(config.reordering_states, 'study1matched')
+    optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_study1matched' ,'.mat'];
+else
+    optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
+end
+load(optimalseqfile);
+bestseq = bestsequencemetrics{1};
+ttl{1} = 'MEG UK';
+ttl{3} = 'HCP';
+ttl{6} = 'Cam-CAN';
+
 FO_2ndlevel = mean(GammaPoiss);
 statedist_all = zeros(1,12);
 for i=1:3
     statedist_all = statedist_all + FO_2ndlevel(i)*hmmPoiss.state(i).W.W_mean;
 end
 statedist_all = statedist_all ./ 125; % ratio rather than integer
+
+% Option 1
 for i=1:3
-  colorweights(:,i) = hmmPoiss.state(i).W.W_mean ./ 125 - statedist_all;
+  colorweights(:,i) = hmmPoiss.state(i).W.W_mean;% ./ 125 - statedist_all;
 end
 colorweights = (colorweights-min(colorweights(:))+0.01);
 
 colorweights = log(colorweights) - min(log(colorweights(:))) + 0.01;
 colorweights = colorweights./(max(colorweights(:)+0.1));
 
-% make plots:
-if strcmp(config.reordering_states, 'coherence')
-    optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
-else
-    optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
-end
-load(optimalseqfile);
-bestseq = bestsequencemetrics{1};
-
 fig=setup_figure([], 1.5, 0.35);
-CM = colormap(fig,hot(20));
+n_tiles=12;
+CM = colormap(fig,hot(n_tiles));
 for i=1:3
-  ax(i) = axes('Position', [0.035+(i-1)*0.3 0.1 0.225, 0.8])
+  ax(i) = axes('Position', [0.035+(i-1)*0.33 0.1 0.225, 0.8])
   for i2=1:12
     CW{i2} = CM(ceil(length(CM)*10.^colorweights(i2,i)/10),:);
   end
   cyclicalstatesubplot(bestseq,zeros(12),zeros(12),CW);
+  if i==2
+ title({ttl{whichstudy}, ''})
+  end
+  set_font(8)
+end
+
+save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile'],false);
+
+% option 2
+clear colorweights
+
+for i=1:3
+  colorweights(:,i) = hmmPoiss.state(i).W.W_mean;% ./ 125 - statedist_all;
+end
+
+fig=setup_figure([], 1.5, 0.35);
+n_tiles=12;
+x = linspace(0, round(max(colorweights(:))), n_tiles);
+for k=1:3
+[~, ix(:,k)] = sort(colorweights(:,k), 'ascend');
+end
+
+CM = colormap(fig,hot(n_tiles));
+for i=1:3
+  ax(i) = axes('Position', [0.035+(i-1)*0.3 0.1 0.225, 0.8])
+  for i2=1:12
+    CW{i2} = CM(ix(i2,i),:);
+  end
+  cyclicalstatesubplot(bestseq,zeros(12),zeros(12),CW);
+  if i==2
+
+ title({ttl{whichstudy}, ''})
+  end
   set_font(8)
 end
 ax(4) = axes('Position', [0.035+(i)*0.275 0.15 0.1, .6])
 h=colorbar;
-h.Ticks = [0 1];
-h.TickLabels = {'low', 'high'}
-text(1.1, 1.2, 'FO')
+h.Ticks = 0:1/(n_tiles-1):1;
+h.TickLabels = round(x);
+text(1.1, 1.2, 'Weight')
 axis off
- save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile']);
+save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile_binned'],false);
 
 
 
