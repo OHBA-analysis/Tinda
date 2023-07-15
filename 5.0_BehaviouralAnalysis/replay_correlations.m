@@ -274,6 +274,24 @@ for perc=1%[1,5]
     end
     G_evoked = squeeze(nanmean(reshape(G_evoked, 251, 12, 2, []),3));
     
+
+cfg=[];
+cfg.timeaxis = [-.5 .5];
+cfg.timelabel = {'Time (s)'};
+cfg.title = {'Relative state probability',''};
+cfg.cblabel = 'Relative probability';
+plot_cycle_rt(cfg, bestseq, nanmean(G_evoked(:,bestseq,1:42),3), color_scheme)
+save_figure([config.figdir, 'circle_evoked_gamma_study1'], false)
+
+cfg=[];
+cfg.timeaxis = [-.5 .5];
+cfg.timelabel = {'Time (s)'};
+cfg.title = {'Relative state probability',''};
+cfg.cblabel = 'Relative probability';
+plot_cycle_rt(cfg, bestseq, nanmean(G_evoked(:,bestseq,43:end),3), color_scheme)
+save_figure([config.figdir, 'circle_evoked_gamma_study2'], false)
+
+    %%
     
     % figure;
     q{1} = squeeze(mean(betas_norm{1}))'; %squeeze(betas_norm{1}(126,:,:))';
