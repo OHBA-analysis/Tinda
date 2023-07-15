@@ -36,7 +36,6 @@ else
     end
 end
 
-
 if whichstudy>=6
     hmm.K=12;
 else
@@ -379,7 +378,6 @@ SequenceAnalysis_transprob_simulations
 if whichstudy==7 || whichstudy==8
   load([config.resultsdir, 'wakehen_events_badseg_adapted.mat'])
 
-
   % trigger info:
   % 5-7: Famous face
   % 13-15: Unfamiliar face
@@ -389,6 +387,11 @@ if whichstudy==7 || whichstudy==8
   event_codes = unique(tmp(:,3));
   vis_events = [5:7, 13:15, 17:19];
   mot_events = setdiff(event_codes, vis_events)';
+
+  % get reaction times and state that was active at moment of visual
+  % stimulus and button press
+  wakeman_henson_correlation;
+
   
   % average reaction time 932 ms
   % we want minimal overlap between the two windows
@@ -475,8 +478,13 @@ end
 
 
 %% Figure 3: Spectral information in the circle plot
+
 figure3_spectral_circle
 
+if whichstudy==7 || whichstudy==8
+  dotrialglm=true;
+  figure3_spectral_circle
+end
 
 
 %% Figure 3 supplement: TINDA Movie
