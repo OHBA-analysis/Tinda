@@ -22,7 +22,7 @@ for iperm=1:n_sim_perm
   simulation{iperm}.assym_ttest = a;
   
   
-  simulation{iperm}.bestsequencemetrics = optimiseSequentialPattern(simulation{iperm}.FO_intervals);
+  simulation{iperm}.bestsequencemetrics = bestsequencemetrics; % optimiseSequentialPattern(simulation{iperm}.FO_intervals);
   angleplot_sim = circle_angles(simulation{iperm}.bestsequencemetrics{1});
   simulation{iperm}.cycle_metrics = compute_tinda_metrics(config, simulation{iperm}.bestsequencemetrics{1}, angleplot_sim, simulation{iperm}.FO_intervals, simulation{iperm}.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
   
@@ -41,7 +41,7 @@ hline(mean(hmm_1stlevel.cycle_metrics.rotational_momentum./hmm_1stlevel.cycle_me
 xlabel('Simulation')
 ylabel('M')
 yl = ylim;
-ylim([yl(1)*1.1 0])
+ylim([0 yl(2)*1.1])
 
 text(0.4, .1, 'Observed', 'Units', 'normalized')
 title({'Mean (+SEM) rotational momentum', 'from Markovian model'})
@@ -72,7 +72,7 @@ for j=1:K
 end
 end
 simulation_average.assym_ttest = a;
-simulation_average.bestsequencemetrics = optimiseSequentialPattern(simulation_average.FO_intervals);
+simulation_average.bestsequencemetrics = bestsequencemetrics;
 simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_average.bestsequencemetrics{1}, angleplot, simulation_average.FO_intervals, simulation_average.assym_ttest.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme, false);
 
 % compare the observed circularity with the simulated one
@@ -99,7 +99,7 @@ simulation_average.cycle_metrics = compute_tinda_metrics(config, simulation_aver
 hmm_1stlevel.simulation_average = simulation_average;
 
 %% Group level FO assym
-
+%
 % Alternatively, do the FO assym on the group level
 
 % we can either simulate the vpath based on the group level transprob, or
@@ -128,7 +128,7 @@ for sim=1:nsim
 end
 FO_group_sim = cat(4,FO_group_sim{:});
 hmm_1stlevel.FO_simulation_group = FO_group_sim;
-
+%}
 %% Compare the observed metrics with the simulated ones
 % per subject measures
 cfg=[];
@@ -139,6 +139,7 @@ cfg.ivar = 1;
 cfg.uvar = 2;
 cfg.numrandomization = 100000;
 cfg.correcttail = 'prob';
+cfg.tail = 1;
 
 dat1=[];
 dat1.dimord = 'rpt_chan_time';
@@ -147,13 +148,6 @@ dat1.label{1} = 'metric';
 measures = {'FO_assym_rv_coef', 'FO_assym_subject_fit', 'TIDA', 'rotational_momentum', 'circularity_subject', 'TIDA_perstate', 'rotational_momentum_perstate'};
 for im = measures
   m = im{1};
-  if strcmp(m ,'FO_assym_rv_coef') || ...
-      strcmp(m, 'FO_assym_subject_fit') || strcmp(m, 'TIDA') ||... 
-      strcmp(m, 'TIDA_perstate') || strcmp(m, 'circularity') % these are all positive numbers
-    cfg.tail = 1;
-  else
-    cfg.tail = -1; % rotational momentum should have a tail of -1
-  end
   
   dat1.time=1:size(hmm_1stlevel.cycle_metrics.(m),2);
   dat1.trial = [];
@@ -167,3 +161,13 @@ for im = measures
   dat2.trial(:,1,:) = hmm_1stlevel.simulation_average.cycle_metrics.(m);
   hmm_1stlevel.metric_vs_sim_avg.(m) = ft_timelockstatistics(cfg, dat1, dat2);
 end
+
+%}
+
+
+
+
+
+
+
+
