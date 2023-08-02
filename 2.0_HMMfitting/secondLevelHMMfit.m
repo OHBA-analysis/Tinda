@@ -142,7 +142,25 @@ end
 
 %% Set Poisson window length to average state lifetime:
 load(config.metricfile, 'hmm_1stlevel')
-Poisswindow = ceil(mean(hmm_1stlevel.LT_mu(:)));
+try
+  Poisswindow = ceil(mean(hmm_1stlevel.LT_mu(:)));
+catch
+  opts = [];
+  opts.K = 12;
+  opts.Fs = config.sample_rate;
+  opts.dropstates=0;
+  for k=1:length(vpath)
+    lt = getStateLifeTimes(vpath{k}, hmmT{k}, opts);
+    lt_mu(k,:) = cellfun(@mean, lt);
+  end
+    Poisswindow = ceil(mean(lt_mu(:)));
+end
+
+if whichstudy==7
+  vpath = vpath_ses;
+  hmmT = hmmT_ses;
+  config.nSj = 114;
+end
 
 W=Poisswindow;
 Noverlap = 1; % number of points to overlap over successive windows
@@ -154,12 +172,12 @@ t_last = 0;
 if Noverlap~=0
   overlapstring='_overlappingWindows';
 end
-if whichstudy>0 || ~exist([config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'])
+if whichstudy<4 || ~exist([config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'])
   for iSj=1:config.nSj
     vpTemp = vpath{iSj};
     t_last = t_last + sum(hmmT{iSj});
     fprintf(['\nProcessing subject ',int2str(iSj)]);
-    if whichstudy>=4 %reset for each subject and save, rather than concatenate
+    if whichstudy==4 || whichstudy==6 %reset for each subject and save, rather than concatenate
       X_poiss = [];
       T_poiss = [];
     end
@@ -195,7 +213,7 @@ if whichstudy>0 || ~exist([config.resultsdir,'Poissdata_',int2str(W),overlapstri
       end
     end
     T_poiss(T_poiss==0)=[];
-    if whichstudy==4 || whichstudy==6
+    if whichstudy==4 || whichstudy==6 || whichstudy==7
       if ~isfolder([config.resultsdir,'Poissdata',int2str(W),overlapstring])
         mkdir([config.resultsdir,'Poissdata',int2str(W),overlapstring]);
       end
@@ -222,7 +240,7 @@ if whichstudy>0 || ~exist([config.resultsdir,'Poissdata_',int2str(W),overlapstri
   end
 
 
-  if whichstudy==4
+  if whichstudy==4 || whichstudy==6
     save([config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
   elseif whichstudy==5
     mkdir([config.resultsdir,'TASK_Poissdata_',int2str(W),overlapstring])
@@ -230,7 +248,7 @@ if whichstudy>0 || ~exist([config.resultsdir,'Poissdata_',int2str(W),overlapstri
   end
 
 else
-  if whichstudy==4
+  if whichstudy==4 || whichstudy==6
     load([config.resultsdir,'Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
   elseif whichstudy==5
     load([config.resultsdir,'TASK_Poissdata_',int2str(W),overlapstring,'/filelist.mat'],'mat_files_poiss');
@@ -245,7 +263,11 @@ end
 origmetrics = load(config.metricfile);
 FO_mean = mean(origmetrics.hmm_1stlevel.FO,1);
 K2=4; % 4 state meta HMM
-n_runs = 50; % do permutations for invalid circles
+if whichstudy==1
+  n_runs = 50; % do permutations for invalid circles
+else
+  n_runs=4;
+end
 
 if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state one
   for i_run = 1:n_runs
@@ -352,7 +374,8 @@ if whichstudy~=5 %do not fit a new hmm for HCP task data, use the resting state 
         end
         fprintf(['\nFitting hmm to new batch:']);
         [hmmtemp,Gammatemp,~,~,~,~,fehist] = hmmmar(X_poiss,T_poiss,options);
-
+  allhmm.hmm{i_run} = hmmtemp;
+  allhmm.gamma{i_run} = Gammatemp;
         if i_run==1 || fehist(end)<lowestfe
           hmmPoiss = hmmtemp;
           GammaPoiss = Gammatemp;
@@ -368,13 +391,13 @@ end
 
 %% plot free energy of valid vs invalid, ie null dist of models:
 
-% if whichstudy==1
+if whichstudy==1
 fig=setup_figure([],1,1);
 labels = [repmat({'valid'},4,1);repmat({'invalid'},46,1)];
 [p,anovatab,stats] = anova1(feall(:,2),labels);
 plot4paper('Model','Free Energy')
 save([config.resultsdir, '2ndlevel_HMM_vs_permutations'], 'p', 'anovatab', 'stats','feall', 'gamsum','labels')
-% end
+end
 
 %% plot metastate profile:
 ttl{1} = 'MEG UK';
@@ -419,7 +442,7 @@ for i=1:K2
 end
 ax(5) = axes('Position', [.9 0.175 0.1, .6]); axis off
 h=colorbar;
-save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile'],false);
+% save_figure([config.figdir,'figure4_correlations/4supp_metastate_profile'],false);
 
 
 %% Infer state path for each subject
@@ -443,11 +466,11 @@ if whichstudy<4
   plot4paper('Init run','Min Gamma');
   save_figure([config.resultsdir,'figure/hmm_2ndlevel_ConvergenceRecord_window',int2str(W)],false);
 else
-  if whichstudy==4 || whichstudy==6
+  if whichstudy==4 || whichstudy==6 || whichstudy==7
     save([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
   else
     options = [];
-    options.K = 3; % Note this didn't work with 4 states; one is knocked out and results in wierd behaviour
+    options.K = K2; % Note this didn't work with 4 states; one is knocked out and results in wierd behaviour
     options.distribution = 'poisson';
     options.Pstructure = eye(options.K) + diag(ones(1,options.K-1),1);
     options.Pstructure(options.K,1) = 1;
@@ -519,7 +542,7 @@ if whichstudy<4
   end
 else
   load([config.resultsdir,'secondLevelHMM_Poiss_window',num2str(W),'_K',int2str(options.K),overlapstring,'.mat'],'hmmPoiss');
-  if ~contains(config.Poiss_dir,'overlappingWindows')
+  if isfield(config, 'Poiss_dir') && ~contains(config.Poiss_dir,'overlappingWindows')
     clear FO
     for subnum=1:config.nSj
       Gamtemp = hmmPoiss.gamma(Poiss_subj_inds==subnum,:);
@@ -609,10 +632,8 @@ elseif whichstudy==4 || whichstudy==6
 end
 
 
-if exist(config.metricfile)
-  save(config.metricfile,'hmm_2ndlevel','-append');
-else
-  save(config.metricfile,'hmm_2ndlevel')
-end
+
+save(config.metricfile,'hmm_2ndlevel','-append');
+
 
 
