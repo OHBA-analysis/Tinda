@@ -81,8 +81,8 @@ if whichstudy==1
   tmp = 1/250:1/250:(length(t_segment)/250);
   drawbrace([tmp(s1(2,2)), 1.35*mx],[tmp(s1(3,1)), 1.35*mx], .2, 'color', 'k')
   
-  ax(30) = axes('Position', [.1 .55 .25 .35]); box off, axis off
-  title({'', '\it T_i'}, 'FontSize', 12, 'FontWeight', 'bold')
+  ax(30) = axes('Position', [.1 .59 .25 .35]); box off, axis off
+  title({'', '\it T^i'}, 'FontSize', 12, 'FontWeight', 'bold')
 
 % add dotted line
   ax(28) = axes('Position', [.1 .5 .24 .1]); axis off, box off
@@ -147,7 +147,7 @@ if whichstudy==1
   axis off
   ylim(yl)
   %   title({'$$\ \ \ \ \ \ \ \forall_{k\neq{1}}\sum_{T_{1}|T_{2}}Z_{t}==k$$'},'Interpreter', 'Latex', 'FontSize', 10, 'HorizontalAlignment', 'center')
-  title('\boldmath$FO^{T_1}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
+  title('\boldmath${FO_{T_1}^i}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
   
   %%%%%%%%%%%%%%%%
   % T2 BAR GRAPH %
@@ -162,7 +162,7 @@ if whichstudy==1
   set(gca, 'Ydir', 'reverse')
   axis off
   ylim(yl)
-  title('\boldmath$FO^{T_2}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
+  title('\boldmath${FO_{T_2}^i}$', 'Interpreter', 'Latex', 'FontSize', 10, 'FontWeight', 'bold')
   
   %%%%%%%%%%%%%%%%%%%%%
   % DISTRIBUTION PLOT %
