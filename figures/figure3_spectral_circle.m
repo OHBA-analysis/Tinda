@@ -5,8 +5,9 @@ use_sqrt_f = [true];%[true, false] ; % whether to plot PSD/coh with sqrt of f ax
 statecolor = [true]%, false]; % whether to plot PSD/coh in the state color
 parc = config.parc;
 mni_coords =  config.parc.roi_centers;
+if ~exist('dotrialglm', 'var'), dotrialglm=false; end
 clear yl tmp*
-for whichtopo = 1:2%3
+for whichtopo = 1%:2%3
   do_pow_or_coh = {'pow','coh'};% 'both'
   do_pow_or_coh = do_pow_or_coh{whichtopo};
   for sc = statecolor
@@ -35,12 +36,20 @@ for whichtopo = 1:2%3
       pos([2 6],1) = pos([2 6],1) - [0.075;0.075];
       pos([8 12],1) = pos([8 12],1) + [0.075;0.075];
       
-      pos(bestseq,:) = pos;
+      
+      if dotrialglm
+        pos(hmm_1stlevel.trial_glm.bestsequencemetrics{1},:) = pos;
+      else
+        pos(bestseq,:) = pos;
+      end
       fig = setup_figure([],2,1);
       ax(13,1) = axes('Position', [0.295 0.19 0.38 .6]); hold on
       axes(ax(13,1))
-      cyclicalstateplot(bestseq,hmm_1stlevel.cycle_metrics.mean_direction, zeros(12), color_scheme, false)
-      
+      if dotrialglm
+        cyclicalstateplot(hmm_1stlevel.trial_glm.bestsequencemetrics{1},hmm_1stlevel.trial_glm.cycle_metrics.mean_direction, zeros(12), color_scheme, false)
+      else
+        cyclicalstateplot(bestseq,hmm_1stlevel.cycle_metrics.mean_direction, zeros(12), color_scheme, false)
+      end
       for k=1:12
         ax(k,2) = axes('Position', [0.125 0.025 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.1 0.1]); hold on
         yyaxis left
@@ -133,8 +142,8 @@ for whichtopo = 1:2%3
           CL = 1.1*max(abs(squash(cat(2,pow_state_topo{:})./powAvg_topo)-1));
           CL = [-CL CL];
         end
-        
-        
+
+             
         % Coh topo
         graph = coh_state_topo{k};
         
@@ -152,6 +161,20 @@ for whichtopo = 1:2%3
           [~, ax(k,1), ~] = plot_coh_topo(ax(k,1), mni_coords, graph, cohAvg_topo, [0 3], [], 95);axis off
         end
         colormap(hotcold)
+        
+        if strcmp(do_pow_or_coh, 'pow')
+        % color bar
+        ax(12,1) = axes('Position', [0.015 -0.02 0 0]+[0.85 0.85 1 1].*[pos(k,1), pos(k,2), 0.075 0.1]);
+        tmp = imagesc(CL);
+        tmp.Visible = 'off'; box off, axis off;
+        cb = colorbar('southoutside');
+
+        cb.Limits = CL*100;
+        cb.Ticks = [CL(1)*100 0 CL(2)*100];
+        cb.TickLabels = {num2str(ceil(cb.Ticks(1))), num2str(0), num2str(floor(cb.Ticks(3)))};
+        cb.Ruler.TickLabelRotation=0;
+        ax(12,1).CLim = 100*CL;
+        end
       end
       ax(11,1) = axes('Position', [0.365, 0.38, 0.25, 0.25]); hold on
       clear l
@@ -179,7 +202,11 @@ for whichtopo = 1:2%3
           ylim(([min(min((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*1.05, max(max((squeeze(nanmean(nanmean(coh(:,:,:,offdiagselect),4),3)))))*0.95]))
       end
       set_font(10, {'label', 'title'})
-      save_figure([config.figdir, 'figure3_spectral_circle/','3_Spectral_circle_', do_pow_or_coh, sup1, sup2], false)
+      if dotrialglm
+        save_figure([config.figdir, 'figure3_spectral_circle/','3_Spectral_circle_', do_pow_or_coh, sup1, sup2, '_erf_corrected'], false)
+      else
+        save_figure([config.figdir, 'figure3_spectral_circle/','3_Spectral_circle_', do_pow_or_coh, sup1, sup2], false)
+      end
     end
   end
 end
