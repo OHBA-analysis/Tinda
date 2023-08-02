@@ -33,12 +33,10 @@ for i2=1:length(myperms)
             disttoplot_manual(manualorder(i3)) = exp(sqrt(-1)*i3/K*2*pi);
         end
         angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
-        
+
         for i3=1:3  
             sequencemetric{i3}(i2,i) = imag(sum(sum(angleplot.*metric{i3})));
-        end
-        
-       
+        end      
     end
 end
 for i=1:3
