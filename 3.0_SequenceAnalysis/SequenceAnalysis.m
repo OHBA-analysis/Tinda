@@ -230,6 +230,7 @@ save([config.resultsdir, 'group_avg_spectral_maps.mat'], 'group_avg_coh_wb', 'gr
 [FO_intervals,FO_pvals,t_intervals,FO_stat] = computeLongTermAsymmetry(vpath,hmmT,K);
 
 hmm_1stlevel.FO_intervals = FO_intervals;
+hmm_1stlevel.t_intervals = cellfun(@(x) x/config.sample_rate,t_intervals,'un',0);%./config.sample_rate;
 hmm_1stlevel.assym_permtest = FO_stat;
 hmm_1stlevel.assym_permtest.pvals = FO_pvals;
 a=[];
