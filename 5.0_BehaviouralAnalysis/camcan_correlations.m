@@ -12,9 +12,9 @@ info = [subj_age,subj_gender,subj_RTs];
 % load the cyclical summary metrics
 load(config.metricfile);
 
-cycletime_mu = hmm_2ndlevel.cyctime_mu./1000;
-cycletime_med = hmm_2ndlevel.cyctime_med./1000;
-cycletime_std = hmm_2ndlevel.cyctime_std./1000;
+cycletime_mu = hmm_2ndlevel.cyctime_mu;
+cycletime_med = hmm_2ndlevel.cyctime_med;
+cycletime_std = hmm_2ndlevel.cyctime_std;
 
 cyclerate_mu = 1./cycletime_mu; % this is more gaussian distributed
 
@@ -71,10 +71,14 @@ for k1=1
         box off
         title(ttl{cnt})
         cnt=cnt+1;
-%         save_figure([config.figdir sprintf('figure4_correlations/4_correlation_%s_%s', xlb{k1}, ylb2{k2})])
+        save_figure([config.figdir sprintf('figure4_correlations/4_correlation_%s_%s', xlb{k1}, ylb2{k2})])
         
     end
 end
+
+% find out how much % the rate increases every 10 years
+% 10*b{1}(2)/log(10)
+
 
 %%
 group=subj_gender(~outliers);
@@ -106,8 +110,7 @@ end
 
 
 
-%%
-% and also save in a single figure together with the heritability
+%% plot in a single figure together with the heritability
 clr = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4940 0.1840 0.5560], [0.4660 0.6740 0.1880], [0.3010 0.7450 0.9330]};
 load([config.basedir, 'Study3/HMMsummarymetrics.mat'], 'heritability')
 
@@ -126,9 +129,9 @@ rho = corr(tmp1{k1}, tmp2{k2});
 title({sprintf('R = %.02f', rho), sprintf('p = %0.04f', stats{k1}.p(1+k2))})
 xlim([10 95])
 xticks(20:20:80)
-ylim([1 3.5])
+ylim([1.5 5])
 box off
-ylabel({'\bf \fontsize{15} Cycle rate \rm', ''})
+ylabel({'\bf \fontsize{15} Cycle rate (Hz) \rm', ''})
 
 
 cnt=2; k1=2; k2=1;
@@ -145,7 +148,7 @@ cohend = diff(mu)./sig_pool;
 h=sigstar([1,2], stats{k1}.p(1+k2))
         title({sprintf("Cohen's d = %.02f", cohend), sprintf('p = %0.04f', stats{k1}.p(1+k2))})
 xlim(xl{k1})
-ylim([1 3.5])
+ylim([1.5 5])
 box off
 
 ax(5) = axes('Position', [0.725 0.575 0.25, 0.37]);
@@ -177,10 +180,10 @@ rho = corr(tmp1{k1}, tmp2{k2});
 title({sprintf('R = %.02f', rho), sprintf('p = %0.04f', stats{k1}.p(1+k2))})
 xlim([10 95])
 xticks(20:20:80)
-ylim([-.2 0.1])
+ylim([-.06 .2])
 box off
 % text(0.8,1.2, '\bfCycle strength\rm', 'Units', 'Normalized')
-ylabel({'\bf \fontsize{15} Cycle strength \rm', ''})
+ylabel({'\bf \fontsize{15} Cycle strength (a.u.) \rm', ''})
 
 
 cnt=2; k1=2; k2=2;
@@ -197,7 +200,7 @@ cohend = diff(mu)./sig_pool;
 h=sigstar([1,2], 4*stats{k1}.p(1+k2))
         title({sprintf("Cohen's d = %.02f", cohend), sprintf('p = %0.04f (n.s.)', stats{k1}.p(1+k2))})
 xlim(xl{k1})
-ylim([-.2 .1])
+ylim([-.06 .2])
 box off
 
 
@@ -218,14 +221,16 @@ title({sprintf('h^2 = %.02f', heritability.rotational_momentum.Ests(1,1)), sprin
 xlabel('\bfRelatedness')
 
 
-        save_figure([config.figdir 'figure4_correlations/4_correlations_all'],[],false)
+save_figure([config.figdir 'figure4_correlations/4_correlations_all'],[],false)
 
 %% Correlation between cycle rate and strength
+age = info(:,1);
+
 correlation_cycle_rate_strength=[];
 correlation_cycle_rate_strength.cycle_strength_corrected = regress_out(hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers), age(~outliers));
 correlation_cycle_rate_strength.cycle_rate_corrected = regress_out(cyclerate_mu(~outliers), age(~outliers));
 
-[correlation_cycle_rate_strength.R,correlation_cycle_rate_strength.pval]=corr(cycle_rate_corrected, cycle_strength_corrected);
+[correlation_cycle_rate_strength.R,correlation_cycle_rate_strength.pval]=corr(correlation_cycle_rate_strength.cycle_rate_corrected, correlation_cycle_rate_strength.cycle_strength_corrected);
 
 save([config.resultsdir, 'correlations_demographics'],'correlation_cycle_rate_strength', '-append')
 
@@ -236,7 +241,7 @@ h1 = lsline()
 h1.Color = 'k';
 h1.LineWidth = 2;
 xlabel('\bfCycle rate (Hz)'), 
-ylabel('\bfRotational Momentum')
+ylabel('\bfCycle strength (a.u.)')
 rho = corr(cyclerate_mu(~outliers), hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum);
 title({sprintf('R = %.02f', correlation_cycle_rate_strength.R), sprintf('p = %0.01f * 10^{-19}', 10^19*correlation_cycle_rate_strength.pval)})
 box off
@@ -267,7 +272,7 @@ h1 = lsline()
 h1.Color = 'k';
 h1.LineWidth = 2;
 xlabel('\bfAge'), 
-ylabel('\bfMean absolute asymmetry')
+ylabel('\bfMean absolute FO asymmetry')
 rho = corr(correlation_tida_age.age, correlation_tida_age.tida);
 xlim([10 95])
 xticks(20:20:80)
@@ -361,10 +366,10 @@ ypos = sin(theta);
 ypos = (ypos+1)/2.5+0.05;
 
 % fig=setup_figure([],1.5,1);
-fig=setup_figure([], 1.5, 1.8)
+fig=setup_figure([], 1.5, 2)
 for k=1:12
 % ax(k,1) = axes('Position', [xpos(k)-0.05, ypos(k), 0.075, 0.075]);
-ax(k,1) = axes('Position', [0.06,1-0.98*(k/12), 0.25, 1/16]);
+ax(k,1) = axes('Position', [0.06,.92-0.98*(k/13), 0.25, 1/18]);
 scatter(nanmean(coh_wb(~outliers,k,:),3), hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum, 'MarkerFaceColor', clr{1}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{1}, 'MarkerEdgeAlpha', 0.2)
 xticks([])
 yticks([-.1 -.05 0 .05])
@@ -392,7 +397,7 @@ h1.Color = 'k';
 h1.LineWidth = 2;
 
 % ax(k,2) = axes('Position', [xpos(k)+0.05, ypos(k), 0.075, 0.075]);
-ax(k,2) = axes('Position', [0.38,1-0.98*(k/12), 0.25, 1/16]);
+ax(k,2) = axes('Position', [0.38,.92-0.98*(k/13), 0.25, 1/18]);
 scatter(nanmean(coh_wb(~outliers,k,:),3), cyclerate_mu(~outliers), 'MarkerFaceColor', clr{2}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{2}, 'MarkerEdgeAlpha', 0.2)
 xticks([])
 yticks([1,2,3])
@@ -418,7 +423,7 @@ h1 = lsline()
 h1.Color = 'k';
 h1.LineWidth = 2;
 
-ax(k,3) = axes('Position', [0.71,1-0.98*(k/12), 0.25, 1/16]);
+ax(k,3) = axes('Position', [0.71,.92-0.98*(k/13), 0.25, 1/18]);
 scatter(nanmean(coh_wb(~outliers,k,:),3), age(~outliers), 'MarkerFaceColor', clr{3}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{3}, 'MarkerEdgeAlpha', 0.2)
 xticks([])
 % yticks()
@@ -448,9 +453,120 @@ h1.LineWidth = 2;
 
 
 end
-suptitle({'Correlation between', 'coherence and cycle metrics', ''})
-save_figure([config.figdir, 'figure4_correlations/4_correlation_coherence'])
+sgtitle({'Correlation between', 'coherence and cycle metrics', ''})
+save_figure([config.figdir, 'figure4_correlations/4_correlation_coherence'], false)
 
+%%
+correlation_cyle_metrics_pow=[];
+[correlation_cyle_metrics_pow.R_strength_pow, correlation_cyle_metrics_pow.p_strength_pow] = corr(nanmean(psd_wb(~outliers,:,:),3), hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers));
+
+[correlation_cyle_metrics_pow.R_rate_pow, correlation_cyle_metrics_pow.p_rate_pow] = corr(nanmean(psd_wb(~outliers,:,:),3), cyclerate_mu(~outliers));
+[correlation_cyle_metrics_pow.R_pow_age,correlation_cyle_metrics_pow.p_pow_age] = corr(nanmean(psd_wb(~outliers,:,:),3), age(~outliers));
+
+save([config.resultsdir, 'correlations_demographics'],'correlation_cyle_metrics_pow', '-append')
+
+theta = (0:1/12:.99)*2*pi; % define angles
+theta = circshift(theta,-3); % set first angle to 12 o'clock
+for k=1:K % reshuffle angles in bestseq order
+tmp(k) = theta(bestseq==k);
+end
+theta = tmp;
+
+xpos = cos(theta);
+xpos = (xpos+1)/2.6+0.085;
+ypos = sin(theta);
+ypos = (ypos+1)/2.5+0.05;
+
+% fig=setup_figure([],1.5,1);
+fig=setup_figure([], 1.5, 2)
+for k=1:12
+% ax(k,1) = axes('Position', [xpos(k)-0.05, ypos(k), 0.075, 0.075]);
+ax(k,1) = axes('Position', [0.06,.92-0.98*(k/13), 0.25, 1/18]);
+scatter(nanmean(psd_wb(~outliers,k,:),3), hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum, 'MarkerFaceColor', clr{1}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{1}, 'MarkerEdgeAlpha', 0.2)
+xticks([])
+yticks([-.1 -.05 0 .05])
+title(sprintf('State %d', k))
+
+if k==1
+    if correlation_cyle_metrics_pow.p_strength_pow(k)<0.05/12
+        title({'Cycle strength', sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_strength_pow(k))})
+    else
+        title({'Cycle strength', sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_strength_pow(k))})
+    end
+else
+    if correlation_cyle_metrics_pow.p_strength_pow(k)<0.05/12
+        title(sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_strength_pow(k)))
+    else
+        title(sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_strength_pow(k)))
+    end
+end
+if k==12
+   xlabel('Power') 
+end
+hline(0)
+h1 = lsline()
+h1.Color = 'k';
+h1.LineWidth = 2;
+
+% ax(k,2) = axes('Position', [xpos(k)+0.05, ypos(k), 0.075, 0.075]);
+ax(k,2) = axes('Position', [0.38,.92-0.98*(k/13), 0.25, 1/18]);
+scatter(nanmean(psd_wb(~outliers,k,:),3), cyclerate_mu(~outliers), 'MarkerFaceColor', clr{2}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{2}, 'MarkerEdgeAlpha', 0.2)
+xticks([])
+yticks([1,2,3])
+
+if k==1
+    if correlation_cyle_metrics_pow.p_rate_pow(k)<0.05/12
+        title({'Cycle rate', sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_rate_pow(k))})
+    else
+        title({'Cycle rate', sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_rate_pow(k))})
+    end
+else
+    if correlation_cyle_metrics_pow.p_rate_pow(k)<0.05/12
+        title(sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_rate_pow(k)))
+    else
+        title(sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_rate_pow(k)))
+    end
+end
+if k==12
+   xlabel('Power') 
+end
+
+h1 = lsline()
+h1.Color = 'k';
+h1.LineWidth = 2;
+
+ax(k,3) = axes('Position', [0.71,.92-0.98*(k/13), 0.25, 1/18]);
+scatter(nanmean(psd_wb(~outliers,k,:),3), age(~outliers), 'MarkerFaceColor', clr{3}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{3}, 'MarkerEdgeAlpha', 0.2)
+xticks([])
+% yticks()
+
+if k==1
+    if correlation_cyle_metrics_pow.p_pow_age(k)<0.05/12
+        title({'Age', sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_pow_age(k))})
+    else
+        title({'Age', sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_pow_age(k))})
+    end
+else
+    if correlation_cyle_metrics_pow.p_pow_age(k)<0.05/12
+        title(sprintf('State %d* | R=%.02f', k, correlation_cyle_metrics_pow.R_pow_age(k)))
+    else
+        title(sprintf('State %d | R=%.02f', k, correlation_cyle_metrics_pow.R_pow_age(k)))
+    end
+end
+if k==12
+   xlabel('Power') 
+end
+
+h1 = lsline()
+h1.Color = 'k';
+h1.LineWidth = 2;
+
+
+
+
+end
+sgtitle({'Correlation between', 'power and cycle metrics', ''})
+save_figure([config.figdir, 'figure4_correlations/4_correlation_power'], false)
 
 %%
 
@@ -470,7 +586,7 @@ ypos = (ypos+1)/2.5+0.05;
 fig=setup_figure([], 1,2.8)
 for k=1:12
 % ax(k,1) = axes('Position', [xpos(k)-0.05, ypos(k), 0.075, 0.075]);
-ax(k,1) = axes('Position', [0.095,1-0.98*(k/12), 0.4, 1/16]);
+ax(k,1) = axes('Position', [0.095,.92-0.98*(k/13), 0.4, 1/18]);
 scatter(nanmean(coh_wb(~outliers,k,:),3), hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers)./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum, 'MarkerFaceColor', clr{1}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{1}, 'MarkerEdgeAlpha', 0.2)
 xticks([])
 yticks([-.1 -.05 0 .05])
@@ -498,7 +614,7 @@ h1.Color = 'k';
 h1.LineWidth = 2;
 
 % ax(k,2) = axes('Position', [xpos(k)+0.05, ypos(k), 0.075, 0.075]);
-ax(k,1) = axes('Position', [0.57,1-0.98*(k/12), 0.4, 1/16]);
+ax(k,1) = axes('Position', [0.57,.92-0.98*(k/13), 0.4, 1/18]);
 scatter(nanmean(coh_wb(~outliers,k,:),3), cyclerate_mu(~outliers), 'MarkerFaceColor', clr{2}, 'MarkerFaceAlpha', 0.2, 'MarkerEdgeColor', clr{2}, 'MarkerEdgeAlpha', 0.2)
 xticks([])
 yticks([1,2,3])
@@ -524,8 +640,8 @@ h1 = lsline()
 h1.Color = 'k';
 h1.LineWidth = 2;
 end
-suptitle({'Correlation between', 'coherence and cycle metrics', ''})
-save_figure([config.figdir, 'figure4_correlations/4_correlation_cycle_metrics_coherence'])
+sgtitle({'Correlation between', 'coherence and cycle metrics', ''})
+save_figure([config.figdir, 'figure4_correlations/4_correlation_cycle_metrics_coherence'], false)
 
         %% CCA with intelligence
 [cogdata,cogdatalabels] = camcan_getCognitiveData(config);
@@ -581,52 +697,88 @@ FO_corrected = demean(FO_corrected(keep,:));
 
 
 %% CCA
-%%%%%%%%%%%%%%%%%%%%%%%
-% rotational momentum %
-%%%%%%%%%%%%%%%%%%%%%%%
 % without correction for age, sex:
 % [A,B,r,U,V,stats] = canoncorr(hmm_1stlevel.cycle_metrics.rotational_momentum(~outliers),cogdata(~outliers,3:end));
 % with correction:
-[A,B,r,U,V,stats] = canoncorr(rotational_momentum_corrected,cogdata_corrected);
+[A,B,r,U,V,stats] = canoncorr([rotational_momentum_corrected, cycrate_mu_corrected],cogdata_corrected);
+%% permutations
+nperm=10000
+for k=1:nperm
+  [~,~,r_perm(k,:),~,~,~] = canoncorr([rotational_momentum_corrected, cycrate_mu_corrected],cogdata_corrected(randperm(length(cogdata_corrected)),:));
+end
+cca.r = r;
+cca.A=A;
+cca.B=B;
+cca.U=U;
+cca.V=V;
+cca.stats=stats;
+cca.r_perm = r_perm;
+cca.cogdatalabels = cogdatalabels;
+cca.pval = sum(r_perm>r)./nperm;
+cca.nperm=nperm;
+
+save([config.resultsdir, 'correlations_demographics'], 'cca', '-append')
+
+tbl=table;
+[B_sorted, ix] = sort(B(:,2), 'descend');
+tbl.weight = B_sorted;
+tbl.size = abs(B_sorted);
+tmp = cogdatalabels(3:end)';
+tbl.labels=tmp(ix);
+
+for k=1:length(B_sorted)
+  if B_sorted(k)<0
+    c{k} = clr{1};
+  else
+    c{k} = clr{2};
+  end
+end
+%%
+fig=setup_figure([],1,1);
+ax(1) = axes('Position', [0.05 0.05 0.6 0.9])
+w=wordcloud(tbl, 'labels', 'size', 'Color',cat(1,c{:}), 'Shape', 'rectangle')
+
+ax(2) = axes('Position', [0.7 0.05 0.25 0.9])
+tbl2=table;
+
+tbl2.weight = A(:,2);
+tbl2.size = [1;1] * max(A(:,2));
+
+tbl2.labels={'Cycle strength', 'Cycle rate'}';
+for k=1:length(A(:,2))
+  if A(k,2)<0
+    c2{k} = clr{1};
+  else
+    c2{k} = clr{2};
+  end
+end
+w=wordcloud(tbl2, 'labels', 'size', 'Color',cat(1,c2{:}), 'Shape', 'rectangle')
+save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_metrics_wordcloud'])
+
+%%
+
+
+
+
+
 tmp = [B];
-stats1 = stats;
-stats1.r = r;
-fig=setup_figure([],2,0.5)
-bar(B)
+fig=setup_figure([],2,0.5);
+ax(1) = axes('Position', [0.075 0.35 0.2 0.5])
+bar(A(:,2))
+xticklabels({'Cycle rate', 'Cycle strength'})
+title('Cycle metric')
+ylabel('Coefficient strength')
+box off
+% subplot(1,4,[2 4])
+ax(2) = axes('Position', [0.35 0.35 0.6 0.5])
+bar(B(:,2))
+box off
 xticklabels(cogdatalabels(3:end))
 xtickangle(45)
-ylabel('Coefficient strength')
-title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-save_figure([config.figdir 'figure4_correlations/4_CCA_rotational_momentum'])
 
-%%%%%%%%%%%%%%
-% cycle rate %
-%%%%%%%%%%%%%%
-% without correction for age, sex:
-% [A,B,r,U,V,stats] = canoncorr(1./hmm_2ndlevel.cyctime_mu(~outliers),cogdata(~outliers,:));
-% with correction:
-[A,B,r,U,V,stats] = canoncorr(cycrate_mu_corrected,cogdata_corrected);
-tmp = [tmp,B];
-stats2 = stats;
-stats2.r = r;
-setup_figure([],2,0.5)
-bar(B)
-xticklabels(cogdatalabels(3:end))
-xtickangle(45)
-ylabel('Coefficient strength')
-title(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%s', r, stats.df1, stats.df2, stats.F, stats.p))
-save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_rate'])
-
-
-setup_figure([],2,0.5)
-bar(tmp)
-xticklabels(cogdatalabels(3:end))
-xtickangle(45)
-ylabel('Coefficient strength')
-legend({'Rotational momentum', 'Cycle rate'}, 'Location', 'southwest')
-title({sprintf('Rotational momentum: R=%0.2f, p=%0.3f', stats1.r, stats1.p),...
-  sprintf('Cycle rate: R=%s, p=%s', stats2.r, stats2.p)})
-save_figure([config.figdir 'figure4_correlations/4_CCA_combined'])
+title('Cognitive test')
+sgtitle(sprintf('R=%0.2f, F(%d|%d)=%0.1f, p=%0.3f', r(2), stats.df1(2), stats.df2(2), stats.F(2), stats.p(2)))
+save_figure([config.figdir 'figure4_correlations/4_CCA_cycle_metrics'])
 
 %%
 resp_label = {'cycle rate', 'rotational momentum'};
