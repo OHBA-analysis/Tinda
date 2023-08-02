@@ -89,7 +89,6 @@ twinstructure_MEG = twindata(twinmask,twinmask);
 labels_twins = {'same','unrelated','monozygotic','dizygotic'};
 
 
-
 %% Use APACE to determine heritability
 measure={'cycle_rate', 'rotational_momentum', 'FO'};
 
@@ -97,7 +96,7 @@ for im = 1:3
   ACEfit_Par=[];
   ACEfit_Par.Model = 'ACE';
   if strcmp(measure{im}, 'cycle_rate')
-      data = zscore(1000*1./hmm_2ndlevel.cycletime_mu_sess, [],'all');
+      data = zscore(1./hmm_2ndlevel.cyctime_mu, [],'all');
       regr = [info(:,1:2)];
   elseif strcmp(measure{im}, 'rotational_momentum')
       data = zscore([hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum], [], 'all');
@@ -110,7 +109,6 @@ for im = 1:3
   data_corrected = demean(regress_out(data, regr));
   ACEfit_Par.P_nm =data_corrected';
   ACEfit_Par.InfMx = [config.resultsdir, 'APACE_InfMx.csv'];
-%     ACEfit_Par.InfMx = [config.resultsdir, 'heritability/twins.csv'];
 
   ACEfit_Par.ResDir = [config.resultsdir, 'heritability/', measure{im}, '/'];
 
@@ -120,10 +118,10 @@ for im = 1:3
   ACEfit_Par.ContSel = [];
   ACEfit_Par.NoImg = 1;
   
-  ACEfit_Par = PrepData(ACEfit_Par)
+  ACEfit_Par = PrepData(ACEfit_Par);
   
   ACEfit_Par.alpha_CFT = [];
-  ACEfit_Par = ACEfit(ACEfit_Par)
+  ACEfit_Par = ACEfit(ACEfit_Par);
   
   ACEfit_Par.nPerm = 10000;
   ACEfit_Par.nBoot = 10000;
@@ -151,7 +149,7 @@ for im = 1:3
       AgHe_Method(ACEfit_Par)
   end
   a=[];
-  [a.Ests, a.CIs, a.Ps, a.Names] = APACEsummary(ACEfit_Par,'ResultSummary')
+  [a.Ests, a.CIs, a.Ps, a.Names] = APACEsummary(ACEfit_Par,'ResultSummary');
   
   heritability.(measure{im}) = a;
 end
@@ -182,15 +180,15 @@ group = [ones(size(pairs{1})); 2*ones(size(pairs{2})); 3*ones(size(pairs{3}))];
 fig=setup_figure([],2,0.5);
 for im = 1:2
     if im==1
-        data{im} = 1./hmm_2ndlevel.cycletime_mu_sess;
+        dat{im} = 1./hmm_2ndlevel.cycletime_mu_sess;
         ttl = 'Cycle rate';
     else
-        data{im} = [hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum; 
+        dat{im} = [hmm_1stlevel.tinda_per_ses{1}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{2}.cycle_metrics.rotational_momentum, hmm_1stlevel.tinda_per_ses{3}.cycle_metrics.rotational_momentum]./hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum; 
         ttl = 'Cycle strength';
     end
-    absdiff = [abs((mean(data{im}(pairs{1,1},:),2) - mean(data{im}(pairs{1,2},:),2)));...
-        abs((mean(data{im}(pairs{2,1},:),2) - mean(data{im}(pairs{2,2},:),2)));...
-        abs((mean(data{im}(pairs{3,1},:),2) - mean(data{im}(pairs{3,2},:),2)))];
+    absdiff = [abs((mean(dat{im}(pairs{1,1},:),2) - mean(dat{im}(pairs{1,2},:),2)));...
+        abs((mean(dat{im}(pairs{2,1},:),2) - mean(dat{im}(pairs{2,2},:),2)));...
+        abs((mean(dat{im}(pairs{3,1},:),2) - mean(dat{im}(pairs{3,2},:),2)))];
         
     ax = axes('Position', [0.075+0.5*(im-1) 0.1 0.4, 0.8]);
     boxplot_with_scatter(absdiff, [], 0.5, group)
@@ -200,13 +198,127 @@ for im = 1:2
     title(ttl)
 end
 save_figure([config.figdir, 'figure4_correlations/', 'heritability'],[],false)
-heritability.data = data;
+heritability.data = dat;
 heritability.data_label = {'cycle rate', 'cycle strength'};
 heritability.pairs = pairs;
 heritability.pair_labels = {'MZ', 'DZ', 'non'};
 
 save(config.metricfile, 'heritability', '-append')
 
+%% Correlation with fMRI metastates
+% load fMRI HMM state probabilities and compute FO correlations
+temp = load([config.fmri_metastates, 'BigHMM_820_uniqueP1_K12_mean.mat']);
+
+temp3 = reshape(temp.BigGamma,4800,820,12);
+temp4 = squeeze(mean(temp3,1));
+FOcorr = corr(temp4);
+
+[A1,B1] = nets_hierarchy(FOcorr,FOcorr,1:12,'');
+set(gcf,'Position',[337 350 477 388]);
+% manually set ordering from Diego's paper:
+new_order = [8,12,3,2,7,1,5,6,10,4,9,11];
+save_figure([config.figdir,'figure4_correlations/fMRIClustersFromDiegosPaper'],false);
+
+% run PCA on the FO correlation - MvE: but this is done on the state time
+% courses?
+[a,b] = pca(temp4,'NumComponents',2); % b(:,1) is now each subject's strength of clustering
+rng(2)
+gmmfit = fitgmdist(b,2);
+prob_fit = posterior(gmmfit,b);
+prob_fit = prob_fit(:,2);
+figure();
+scatter(b(prob_fit>0.5,1),b(prob_fit>0.5,2),'filled');hold on;
+scatter(b(prob_fit<=0.5,1),b(prob_fit<=0.5,2),'filled');hold on;
+save_figure([config.figdir,'figure4_correlations/fMRIPCAFromDiegosPaper'],false);
+clustermember = prob_fit<=0.5;
+
+
+% load meta data
+NoFamilyInfo = [108525, 116322, 146331, 168240, 256540, 280941, 524135, 604537, 657659, 867468];
+vars = dlmread([config.fmri_metastates, 'scripts900/vars.txt'],' ');
+subject_IDs_fmri = vars(:,1);
+
+% load subject IDs for MEG:
+infoMEG= HCP_getparticipantinfo();
+subjectIDs_MEG = infoMEG(:,1);
+for i=1:length(subjectIDs_MEG)
+    has_fmri(i) = any(subject_IDs_fmri==subjectIDs_MEG(i));
+    if has_fmri(i)
+        subj_mapping(i) = find(subject_IDs_fmri==subjectIDs_MEG(i));
+    end
+end
+
+% correlation between fmri clustering score and cycle metrics
+% Mean cycle time
+fig=setup_figure([],2,.5);
+grouplabels = {'Cognitive','Sensorimotor'};
+[pval,anovatab_cycle_rate] = anova1(1./hmm_2ndlevel.cyctime_mu,clustermember(subj_mapping)+1,'off');
+ax(1) = axes('Position',[0 0.2, .125,.7]);
+boxplot_with_scatter(1./hmm_2ndlevel.cyctime_mu,[],[],clustermember(subj_mapping)+1);
+set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
+xlabel('fMRI Group'),ylabel('MEG Cycle rate');
+title(['p=',num2str(pval)]);
+
+% Mean cycle strength
+grouplabels = {'Cognitive','Sensorimotor'};
+[pval,anovatab_cycle_strength] = anova1(hmm_1stlevel.cycle_metrics.rotational_momentum,clustermember(subj_mapping)+1,'off');
+ax(2) = axes('Position',[.175 0.2, .125,.7]);
+boxplot_with_scatter(hmm_1stlevel.cycle_metrics.rotational_momentum,[],[],clustermember(subj_mapping)+1);
+set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
+xlabel('fMRI Group'),ylabel('MEG Cycle strength');
+title(['p=',num2str(pval)]);
+
+% Fractional occupancy in each meta state
+for i=1:4
+    [pval_FO2(i),anovatab_FO2{i}]=anova1(hmm_2ndlevel.FO(:,i),clustermember(subj_mapping)+1,'off');
+    ax(2+i) = axes('Position',[.175*(i+1) 0.2, .125,.7]);
+    boxplot_with_scatter(hmm_2ndlevel.FO(:,i),[],[],clustermember(subj_mapping)+1);
+    xlabel('fMRI Group'),ylabel(['MEG Metastate ',int2str(i),' FO']);
+    title(['p=',num2str(pval_FO2(i))]);
+    set(gca,'XTick',[1:2],'XTickLabel',grouplabels);
+end
+save_figure([config.figdir,'figure4_correlations/figure_fmri_metastate_correlation'], false);
+
+% CCA between cycle metrics and fMRI clustering score
+x=[hmm_1stlevel.cycle_metrics.rotational_momentum, 1./hmm_2ndlevel.cyctime_mu, hmm_2ndlevel.FO];
+y=b(subj_mapping,:);
+[A,B,r,U,V,stats] = canoncorr(x, y);
+% permutations
+nperm=10000;
+for k=1:nperm
+  [~,~,r_perm(k,:),~,~,~] = canoncorr([x, ],y(randperm(length(y)),:));
+end
+
+cca.r = r;
+cca.A=A;
+cca.B=B;
+cca.U=U;
+cca.V=V;
+cca.stats=stats;
+cca.r_perm = r_perm;
+cca.pval = sum(r_perm>r)./nperm;
+cca.nperm=nperm;
+cca.labels = {'Cycle rate', 'Cycle strength', 'FO 1', 'FO 2', 'FO 3', 'FO 4'};
+cca.labels2 = {'PC 1', 'PC 2'};
+
+save([config.resultsdir, 'correlation_fmri_metastates'],'cca', 'anovatab_cycle_rate', 'anovatab_FO2', 'anovatab_cycle_strength')
+
+fig=setup_figure([],2,.5);
+ax(1)=axes('Position', [0.1 0.25 0.25 0.6]);
+bar(B)
+box off
+legend({'R1', 'R2'})
+ylabel('Coefficient score')
+xlabel('fMRI metastate')
+xticklabels(cca.labels2)
+ax(1)=axes('Position', [0.4 0.25 0.5 0.6]);
+bar(A)
+box off
+xticklabels(cca.labels)
+xlabel('Cycle metric')
+
+sgtitle({sprintf('R1 = %.02f, p = %.04f', r(1), cca.pval(1)), sprintf('R2 = %.02f, p = %.04f', r(2), cca.pval(2))})
+save_figure([config.figdir,'figure4_correlations/figure_fmri_metastate_cca'], false);
 
 
 %% CCA with cognitive data
