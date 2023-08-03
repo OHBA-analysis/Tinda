@@ -1,10 +1,18 @@
 %% CamCan sanity checks:
-
-participantinfo = tdfread('C:\Users\chiggins\Google Drive\participants.tsv')
-camcandir_matfiles = 'E:\CamCan_2021\HMM\matfiles\';
+if isfolder('/Volumes/T5_OHBA/')
+  basedir = '/Volumes/T5_OHBA/Projects/Tinda';
+else
+  basedir = '/ohba/pi/mwoolrich/datasets/CamCan2021/';
+end
+participantinfo = tdfread(fullfile(basedir, 'ParticipantCovariates/participants.tsv'));
+camcandir_matfiles = fullfile(basedir, 'HMM/matfiles/');
 load([camcandir_matfiles,'filelist'],'mat_files_orth','T_all');
+% MvE addition:
+for k=1:length(mat_files_orth)
+  mat_files_orth{k} = replace(mat_files_orth{k}, [basedir, '/HMM/matfiles/'], camcandir_matfiles);
+end
 for i=1:length(mat_files_orth)
-    mat_files_orth{i}(1)='E';
+%     mat_files_orth{i}(1)='E';
     load(mat_files_orth{i},'vpath')
     for k=1:12
         FO(i,k) = mean(vpath==k);

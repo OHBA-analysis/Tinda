@@ -1,13 +1,18 @@
 %% and fit wavelet estimation:
-load('/Volumes/CamsHD2/CamCan_2021/HMM/matfiles/filelist.mat')
+if isfolder('/Volumes/T5_OHBA/')
+  basedir = '/Volumes/T5_OHBA/Projects/Tinda';
+else
+  basedir = '/ohba/pi/mwoolrich/datasets/CamCan2021';
+end
+load(fullfile(basedir, 'HMM/matfiles/filelist.mat'))
 
 
 %%
-WTSpectfolder = '/Volumes/CamsHD2/CamCan_2021/HMM/WTspect/'
+WTSpectfolder = fullfile(basedir, 'HMM/WTspect/');
 if ~isdir(WTSpectfolder)
     mkdir(WTSpectfolder)
 end
-hmmfile = ['/Volumes/CamsHD2/CamCan_2021/HMM/hmm_analysis1.mat'];
+hmmfile = [fullfile(basedir, 'HMM/hmm_analysis1.mat')];
 load(hmmfile,'hmm');
 
 % set wavelet options:

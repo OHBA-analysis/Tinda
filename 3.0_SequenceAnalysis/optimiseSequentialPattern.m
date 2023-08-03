@@ -9,15 +9,14 @@ function bestseq = optimiseSequentialPattern(FO,optimalseqfile)
 % proportion of a baseline - which is time spent in the state)
 % sequence metric 3 is the propotional FO assymetry using the global,
 % rather than subject-sepcific, baseline FO
-%
 
 metric{1} = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4));
 temp = (FO(:,:,1,:)-FO(:,:,2,:))./mean(FO,3); % control for NANs where a state isn't visited
 temp(mean(FO,3)==0)=0;
 metric{2} = squeeze(mean(temp,4));
 metric{3} = squeeze(mean(FO(:,:,1,:)-FO(:,:,2,:),4)) ./ mean(FO(:,:,:),3);
-
-myperms = perms(1:10);
+K=size(FO,1);
+myperms = perms(1:K-2);
 for i=1:9
     sequencemetric{i} = zeros(length(myperms),5);
 end
@@ -29,17 +28,26 @@ for i2=1:length(myperms)
         % setup state points on unit circle:
         manualorder = [1,2+myperms(i2,:)];
         manualorder = [manualorder(1:i),2,manualorder(i+1:end)];
-        disttoplot_manual = zeros(12,1);
-        for i3=1:12
-            disttoplot_manual(manualorder(i3)) = exp(sqrt(-1)*i3/12*2*pi);
+        disttoplot_manual = zeros(K,1);
+        for i3=1:K
+            disttoplot_manual(manualorder(i3)) = exp(sqrt(-1)*i3/K*2*pi);
         end
         angleplot = exp(sqrt(-1)*(angle(disttoplot_manual.')-angle(disttoplot_manual)));
-        
+
         for i3=1:3  
             sequencemetric{i3}(i2,i) = imag(sum(sum(angleplot.*metric{i3})));
+        end     
+        % TODO: the largest weight is now given to a transition 3 places away. What if we use steps instead?
+        % work in progress
+        %{
+        dist=[0 -5:1:-1 0 1:5];
+        for k=1:12
+          Q(k,manualorder) = circshift(dist,k-1);
         end
-        
-       
+        for i3=1:3  
+            sequencemetric{i3}(i2,i) = sum(sum(Q.*metric{i3}));
+        end
+}
     end
 end
 for i=1:3

@@ -3,11 +3,9 @@
 
 % this the script to run on the October 2021 preprocced data:
 
-addpath(genpath('C:\Users\chiggins\Google Drive\MATLAB\8.0 Sequential RSNs'));
-
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';
-dirname = 'G:\HCP_CH\ve_output_rest\'
-dirname_matfiles = 'G:\HCP_CH\ve_output_rest_matfiles\'
+dirname = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
+dirname_matfiles = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest_matfiles/';
 if ~isdir(dirname_matfiles)
     mkdir(dirname_matfiles)
 end
@@ -70,6 +68,8 @@ for i=1:length(filenames)
     %end
     mat_files_orth{i} = fnamemat;
 end
+save([dirname_matfiles, 'matfiles.mat'], 'mat_files_orth')
+
 SR = unique(SR);
 if length(SR)>1
     error('Data not at same sample rate');
@@ -134,7 +134,7 @@ options.BIGdelay = 5;
 options.BIGforgetrate = 0.7;
 options.BIGbase_weights = 0.9;
 for irun=1:Nruns
-
+    irun
     outputfile = [dirname 'hmm_analysis',int2str(irun),'.mat'];
     fprintf(['Running HMM:']);
     [hmm, Gamma, ~, vpath,~,~,fehist] = hmmmar(mat_files_orth,T_all,options);
@@ -157,8 +157,6 @@ for irun=1:Nruns
     vpath = vpath2;
     hmm = rmfield(hmm,'gamma');
     save(outputfile,'hmm','Gamma','vpath','T_all','fehist')
-
-
 end
 
 %% find lowest free energy model:
@@ -232,11 +230,10 @@ plot(f,squeeze(mean(coh_m(:,:,7:12),2)),'LineWidth',2,'LineStyle','--');hold on;
 legend('1','2','3','4','5','6','7','8','9','10','11','12')
 
 %% NOW: refit above hmm model to task data:
-addpath(genpath('C:\Users\chiggins\Google Drive\MATLAB\8.0 Sequential RSNs'));
 
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';
-dirname = 'G:\HCP_CH\ve_output_Wrkmem\'
-dirname_matfiles = 'G:\HCP_CH\ve_output_Wrkmem_matfiles\'
+dirname = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem/'
+dirname_matfiles = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_Wrkmem_matfiles/'
 if ~isdir(dirname_matfiles)
     mkdir(dirname_matfiles)
 end
@@ -250,7 +247,7 @@ end
 filenames = filenames(hdf5files);
 
 %%
-clear fnamepart T_all
+clear fnamepart T_all mat_files_orth
 for i=1:length(filenames)
     fnamepart{i} = filenames(i).name;
     fname = [dirname,fnamepart{i}];
@@ -275,7 +272,7 @@ end
 
 %% load and fit to data:
 
-outputfile = ['G:\HCP_CH\ve_output_rest\' 'hmm_analysis',int2str(best_model),'.mat'];
+outputfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/' 'hmm_analysis',int2str(best_model),'.mat'];
 load(outputfile,'hmm') % careful not to also overwrite T_all!
 
 clear T_all;
@@ -334,8 +331,8 @@ legend('1','2','3','4','5','6','7','8','9','10','11','12');
 %% and to Story / Math task:
 
 % dirname = 'C:\Users\chiggins\My Data\HCP_sails\ve-preproc\';
-dirname = 'G:\HCP_CH\ve_output_StoryM\'
-dirname_matfiles = 'G:\HCP_CH\ve_output_StoryM_matfiles\'
+dirname = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM/'
+dirname_matfiles = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_StoryM_matfiles/'
 if ~isdir(dirname_matfiles)
     mkdir(dirname_matfiles)
 end
@@ -373,7 +370,7 @@ end
 
 % load and fit to data:
 
-outputfile = ['G:\HCP_CH\ve_output_rest\' 'hmm_analysis',int2str(best_model),'.mat'];
+outputfile = ['/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/' 'hmm_analysis',int2str(best_model),'.mat'];
 load(outputfile,'hmm') % careful not to also overwrite T_all!
 
 clear T_all;

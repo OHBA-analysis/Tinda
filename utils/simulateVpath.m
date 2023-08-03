@@ -18,7 +18,7 @@ for iseg=1:length(T)
     vpath_segment = vpath((t0+1):(t0+T(iseg)));
     for i1=1:K
         for i2=1:K
-            P(i1,i2) = sum(vpath_segment(1:end-1)==i1 & vpath_segment(2:end)==i2);
+            P(i1,i2) = P(i1,i2) + sum(vpath_segment(1:end-1)==i1 & vpath_segment(2:end)==i2);
         end
     end
     t0 = t0+T(iseg);
@@ -32,9 +32,9 @@ for iseg=1:length(T)
     vpath_new(t0+1) = find(z(1)<cumsum(FO,2),1);
     for iT = 2:T(iseg)
         try % wierd syntax here just to catch very rare precision errors
-            vpath_new(iT) = find(z(iT)<P_sim(vpath_new(iT-1),:),1);
+            vpath_new(t0+iT) = find(z(iT)<P_sim(vpath_new(iT-1),:),1);
         catch
-            vpath_new(iT) = find(z(iT)<P_sim(vpath_new(iT-1),:),1);
+            vpath_new(t0+iT) = find(z(iT)<P_sim(vpath_new(iT-1),:),1);
         end
     end
     t0 = t0+T(iseg);

@@ -1,6 +1,7 @@
-function fig1 = plotCyclicalTimeFreqPattern(manualorder,p,a,b,f)
+function fig1 = plotCyclicalTimeFreqPattern(manualorder,p,a,b,f,config)
 % state sequence is the sequence of states, starting at the noon position
 % and proceeding clockwise
+nnodes = size(b,1);
 
 set(gcf,'Position',[1 54 1440 744]);
 applythresh = true; % threshold spatial maps
@@ -23,12 +24,7 @@ for ik=1:K
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1.MarkerFaceAlpha = 1;%.75;
-    
-    if ik<10
-        text(disttoplot_manual(ik,1)-0.01,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    else
-        text(disttoplot_manual(ik,1)-0.07,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    end
+    text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold', 'HorizontalAlignment', 'center', 'FontName', 'Calibri');hold on;
 end
 axis square
 axis off
@@ -52,15 +48,16 @@ for i=1:length(freq_labels)
     freq_locs(i) = find(f>freq_labels(i),1);
 end
 freq_locs = fliplr(length(f)-freq_locs+1);
-for inode = 1:6
-    subplot(6,3,nodelocs(inode));
+for inode = 1:nnodes
+    subplot(nnodes,3,nodelocs(inode));
     %make time-frequency plot:
     freq_time_map{inode} = demean(freq_time_map{inode},2);
-    imagesc(flipud(freq_time_map{inode}));
-    set(gca,'YTick',freq_locs);
-    set(gca,'YTickLabel',fliplr(freq_labels));
-    set(gca,'XTick',[]);
-    plot4paper('Cycle time','Frequency');
+    imagesc(flipud([freq_time_map{inode}(1:40,floor(1000/12):end) freq_time_map{inode}(1:40,1:floor(1000/12))]));
+    set(gca,'YTick',[40/3, 40*2/3]);
+    set(gca,'YTickLabel',fliplr(freq_labels(1:2)));
+    set(gca,'XTick',1000/24:1000/12:1000);
+    set(gca, 'XTickLabel', manualorder);
+    plot4paper([],'Frequency');
 end
 colormap('hot');
 cm = colormap;
@@ -68,7 +65,7 @@ colormap(cm(1:50,:));
 % plot 2 way brain plots:
 surface_inflation = 2;
 interptype = 'trilinear';
-for inode=1:6
+for inode=1:nnodes
     data = b(inode,:);
     
     if applythresh
@@ -93,9 +90,10 @@ for inode=1:6
             display_surf_right = fullfile(osldir,'std_masks','ParcellationPilot.R.very_inflated.32k_fs_LR.surf.gii');
             display_surf_left = fullfile(osldir,'std_masks','ParcellationPilot.L.very_inflated.32k_fs_LR.surf.gii');
     end
-    runcmd('/Users/chiggins/.local/src/workbench/bin_macosx64/wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_right,output_right,interptype)
-     runcmd('/Users/chiggins/.local/src/workbench/bin_macosx64/wb_command -volume-to-surface-mapping %s %s %s -%s',niifile,surf_left,output_left,interptype)
 
+    runcmd('%s/wb_command -volume-to-surface-mapping %s %s %s -%s',config.workbenchdir, niifile,surf_right,output_right,interptype)
+    runcmd('%s/wb_command -volume-to-surface-mapping %s %s %s -%s',config.workbenchdir, niifile,surf_left,output_left,interptype)
+    
     sl = gifti(display_surf_left);
     vl = gifti(output_left);
     sr = gifti(display_surf_right);
@@ -133,8 +131,8 @@ for inode=1:6
 %     ax(3) = axes('Position',[0.09 0.01 0.5 0.5]);
 %     ax(4) = axes('Position',[0.475 0.01 0.5 0.5]);
     
-    ax(1) = subplot(6,6,3+(inode-1)*6);
-    ax(2) = subplot(6,6,4+(inode-1)*6);
+    ax(1) = subplot(nnodes,6,3+(inode-1)*6);
+    ax(2) = subplot(nnodes,6,4+(inode-1)*6);
     %ax(3) = subplot(6,6,6+3);
     %ax(4) = subplot(6,6,6+4);
     ax(1).Position(3:4) = 1.2*ax(1).Position(3:4);
@@ -198,7 +196,8 @@ for inode=1:6
         %colormap(cm)
         %zoom(1.1)
         if ~isempty(clims)
-            caxis(clims);
+%             caxis(clims);
+caxis([0 1.2*max([vl.cdata;vr.cdata])])
         else
             mn = min([min(vl.cdata) min(vr.cdata)]);
             mx = max([max(vl.cdata) max(vr.cdata)]);

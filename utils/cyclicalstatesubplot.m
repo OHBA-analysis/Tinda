@@ -1,4 +1,4 @@
-function ax = cyclicalstatesubplot(ordering,mean_direction,sigpoints,color_scheme)
+function ax = cyclicalstatesubplot(ordering,mean_direction,sigpoints,color_scheme, markersize)
 % Plot state network as circular diagram with arrows
 
 if nargin<1
@@ -13,6 +13,10 @@ disttoplot_manual = zeros(12,2);
 for i=1:12
     temp = exp(sqrt(-1)*(i+2)/12*2*pi);
     disttoplot_manual(ordering(i),:) = [real(temp),imag(temp)];
+end
+
+if ~exist('markersize', 'var')
+    markersize = 400;
 end
 
 
@@ -43,25 +47,15 @@ for ik1=1:K
         end
     end
 end
+tmpa = gca;
+msize = (0.5+tmpa.Position(3)/2)*markersize;
 for ik=1:K
-    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),400,...
+    scatter1 = scatter(disttoplot_manual(ik,1),disttoplot_manual(ik,2),msize,...
         'MarkerFaceColor',color_scheme{ik},'MarkerEdgeColor',color_scheme{ik}); 
     hold on
     % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
     scatter1.MarkerFaceAlpha = 1;%.75;
-    if ik==10
-        scatter1 = scatter(disttoplot_manual(ik-1,1),disttoplot_manual(ik-1,2),400,...
-        'MarkerFaceColor',color_scheme{ik-1},'MarkerEdgeColor',color_scheme{ik-1}); 
-        hold on
-        % Set property MarkerFaceAlpha and MarkerEdgeAlpha to <1.0
-        scatter1.MarkerFaceAlpha = 0.5;
-        text(disttoplot_manual(ik-1,1)-0.03,disttoplot_manual(ik-1,2),int2str(ik-1),'FontSize',12,'FontWeight','bold');hold on;
-    end
-    if ik<10
-        text(disttoplot_manual(ik,1)-0.03,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    else
-        text(disttoplot_manual(ik,1)-0.05,disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold');hold on;
-    end
+        text(disttoplot_manual(ik,1),disttoplot_manual(ik,2),int2str(ik),'FontSize',12,'FontWeight','bold', 'HorizontalAlignment', 'center', 'FontName', 'Calibri');hold on;
 end
 axis square
 axis off
