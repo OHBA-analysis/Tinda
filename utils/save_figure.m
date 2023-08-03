@@ -19,6 +19,7 @@ end
 
 print(path,'-depsc')
 print(path,'-dpng')
+print(path,'-dsvg')
 if highres
   set(fig, 'Position', [1 1 2 2].*fig.Position)
   set_font(14);
