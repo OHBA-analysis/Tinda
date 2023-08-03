@@ -55,46 +55,47 @@ for k =1:K
     box off
     
     % power map
-    ax(k, 3) = axes('Position', [q*w+0.0175, .925-2.1*((k-1)-w*K)/(K+1), .11, .75*1/K]);
-    ax(k, 4) = axes('Position', [q*w+0.175, .925-2.1*((k-1)-w*K)/(K+1), .11, .75*1/K]);
+    ax(k, 3) = axes('Position', [q*w+0.01, .92-2.1*((k-1)-w*K)/(K+1), 1.4*1/K, 1/K]);
+    ax(k, 4) = axes('Position', [q*w+0.178, .92-2.1*((k-1)-w*K)/(K+1), 1.4*1/K, 1/K]);
     
     pow_topo =   pow_state_topo{k};
     toplot = (pow_topo)./(powAvg_topo) - 1;
     CL = max(abs(toplot(:)))*[-1, 1];
-    
+
     psdthresh=CL(1)-.1;
-      f2 = plot_surface_4way(parc,toplot,0,false,'trilinear',[],psdthresh,CL,ax(k, 3:4));
+    f2 = plot_surface_4way(parc,toplot,0,false,'trilinear',[],psdthresh,CL,ax(k, 3:4));
+
+    % color bar
+    ax(k,10) = axes('Position', [q*w+.116, .912-2.1*((k-1)-w*K)/(K+1), .07, .05]), 
+    tmp = imagesc(CL);
+    tmp.Visible = 'off'; box off, axis off;
+    cb = colorbar('southoutside');
     
+    cb.Limits = CL*100;
+    cb.Ticks = [CL(1)*100 0 CL(2)*100];
+    cb.TickLabels = {num2str(ceil(cb.Ticks(1))), num2str(0), num2str(floor(cb.Ticks(3)))};
+    cb.Ruler.TickLabelRotation=0;
+    ax(k,10).CLim = 100*CL;
+
     % coherence map
-    ax(k, 6) = axes('Position', [q*w+0.0175, .8575-2.1*((k-1)-w*K)/(K+1), .075, .75*1/K]); cla
-    ax(k, 7) = axes('Position', [q*w+0.205, .8575-2.1*((k-1)-w*K)/(K+1), 0.075, .75*1/K]); cla
-    ax(k, 8) = axes('Position', [q*w+0.115, .8575-2.1*((k-1)-w*K)/(K+1), .07, .7*1/K]); cla
+    ax(k, 6) = axes('Position', [q*w+0.0175, .815-2.1*((k-1)-w*K)/(K+1), 1.2*.8*1/K, 1.4*1/K]); cla, box off, axis off
+    ax(k, 7) = axes('Position', [q*w+0.205, .815-2.1*((k-1)-w*K)/(K+1), 1.2*.8*1/K, 1.4*1/K]); cla, box off, axis off
+    ax(k, 8) = axes('Position', [q*w+0.115, .83-2.1*((k-1)-w*K)/(K+1), 1.1*.8*1/K, 1.1*1/K]); cla, box off, axis off
     
     graph = coh_state_topo{k};
     [~, ax(6:8), ~] = plot_coh_topo(ax(k,6:8), mni_coords, graph, cohAvg_topo, [1 2], [], th);
-    ax(k, 9) = axes('Position', [q*w+0.1125, .91-2.1*((k-1)-w*K)/(K+1), 0.075, .75*1/K]); cla, axis off, box off
+    ax(k, 9) = axes('Position', [q*w+0.112, .91-2.1*((k-1)-w*K)/(K+1), 0.075, .75*1/K]); cla, axis off, box off
     title(sprintf('State %d', k))
-end
 
+end
+%%
 % colormap for power
 for k=1:K
-    for ii=3:4
+    for ii=[3:4 10]
         colormap(ax(k,ii), cmap)
     end
+
 end
 
 save_figure([config.figdir,  'figure_supp_tinda_states/', '1supp_all_state_descriptions', '_relative'],[],false);
-
-
-
-%% Fig 1 supplement: plot as multiple individual state plots:
-fig=setup_figure([],2,.33);
-cyclicalstateplot_perstate(bestseq,hmm_1stlevel.cycle_metrics.mean_direction,hmm_1stlevel.assym_ttest.sigpoints,[],false,color_scheme);
-save_figure([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways']);
-
-% also print for legend:
-figure('Position', [440 579 114 219]);
-quiver(0,0,1,0,'Color',[0 0 0],'LineWidth',2,'MaxHeadSize',0.8);hold on;
-quiver(0,1,1,0,'Color',[0 0 0]+0.8,'LineWidth',2,'MaxHeadSize',0.8);hold on;
-axis off;
-print([config.figdir, 'figure_supp_tinda_states/', '1supp_StatePathways_legend'], '-dpng')
+close
