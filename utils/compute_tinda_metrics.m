@@ -1,7 +1,12 @@
-function metrics = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals, sigpoints, color_scheme, doplot)
+function metrics = compute_tinda_metrics(config, bestseq, FO_intervals, sigpoints, color_scheme, doplot, compute_circularity)
 if ~exist('doplot')
   doplot = true;
 end
+if ~exist('compute_circularity')
+  compute_circularity = false;
+end
+angleplot = circle_angles(bestseq);
+
 K = size(FO_intervals,1);
 metrics = struct;
 
@@ -25,7 +30,7 @@ metrics.P = tmp./nansum(tmp,2); % transition probability based on asymmetries
 % asymmetry
 rotational_momentum = compute_rotational_momentum(angleplot, metrics.FO_assym);
 metrics.rotational_momentum = rotational_momentum;
-metrics.max_theoretical_rotational_momentum = compute_rotational_momentum(angleplot, sign(imag(angleplot)));
+metrics.max_theoretical_rotational_momentum = abs(compute_rotational_momentum(angleplot, sign(imag(angleplot))));
 
 % also get the metric for each state
 % Note that we are counting each (i,j) double because for the rotational
@@ -34,7 +39,7 @@ metrics.max_theoretical_rotational_momentum = compute_rotational_momentum(anglep
 for k=1:K
   metrics.rotational_momentum_perstate(:,k) = compute_rotational_momentum(angleplot, metrics.FO_assym, k);
 end
-metrics.max_theoretical_rotational_momentum_perstate = 2*metrics.max_theoretical_rotational_momentum/K;
+metrics.max_theoretical_rotational_momentum_perstate = abs(2*metrics.max_theoretical_rotational_momentum/K);
 
 
 
@@ -48,7 +53,7 @@ end
 
 % Circularity is the normalised, thresholded clockwise distance (e.g. done
 % on the circle plot
-if ~isempty(bestseq)
+if compute_circularity
   [circularity, circle_pval, ~, ~, fig] = geometric_circularity(bestseq, metrics.mean_direction, sigpoints,[],[],doplot,color_scheme);
   metrics.circularity = circularity;
   metrics.circularity_pval = circle_pval;

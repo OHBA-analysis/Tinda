@@ -178,13 +178,13 @@ hmm_1stlevel.WrkMem.FO_intervals = FO_intervals;
 hmm_1stlevel.WrkMem.FO_stat = FO_stat;
 hmm_1stlevel.WrkMem.FO_pvals = FO_pvals;
 sigpoints = FO_pvals<alpha_thresh;
-hmm_1stlevel.WrkMem.cycle_metrics = compute_tinda_metrics(config, [], rsn.angleplot, FO_intervals, sigpoints, color_scheme);
+hmm_1stlevel.WrkMem.cycle_metrics = compute_tinda_metrics(config, rsn.bestseq, FO_intervals, sigpoints, color_scheme);
 
 hmm_1stlevel.WrkMem.residual.FO_intervals = FO_residual;
 hmm_1stlevel.WrkMem.residual.FO_stat = stat_residual;
 hmm_1stlevel.WrkMem.residual.FO_pvals = pvals_residual;
 sigpoints_residual = pvals_residual<alpha_thresh;
-hmm_1stlevel.WrkMem.residual.cycle_metrics = compute_tinda_metrics(config, [], rsn.angleplot, FO_residual, sigpoints_residual, color_scheme);
+hmm_1stlevel.WrkMem.residual.cycle_metrics = compute_tinda_metrics(config, rsn.bestseq, FO_residual, sigpoints_residual, color_scheme);
 
 
 cyclicalstateplot(rsn.bestseq,hmm_1stlevel.WrkMem.cycle_metrics.mean_direction,sigpoints);

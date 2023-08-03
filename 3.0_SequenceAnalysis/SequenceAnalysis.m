@@ -290,9 +290,9 @@ angleplot = circle_angles(bestseq);
 
 %% Compute TINDA metrics
 
-hmm_1stlevel.cycle_metrics = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
+hmm_1stlevel.cycle_metrics = compute_tinda_metrics(config, bestseq, FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
 
-hmm_1stlevel.cycle_metrics_no_ordering = compute_tinda_metrics(config, [1 12:-1:2], circle_angles([1 12:-1:2]), FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
+hmm_1stlevel.cycle_metrics_no_ordering = compute_tinda_metrics(config, [1 12:-1:2], FO_intervals, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
 
 clear a
 hmm_1stlevel.metric_vs_no_ordering=[];
@@ -319,14 +319,14 @@ if whichstudy==3
             end
         end
         hmm_1stlevel.tinda_per_ses{iSes}.assym_ttest = b;
-        hmm_1stlevel.tinda_per_ses{iSes}.cycle_metrics = compute_tinda_metrics(config, [], angleplot, a.FO_intervals, b.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme);
+        hmm_1stlevel.tinda_per_ses{iSes}.cycle_metrics = compute_tinda_metrics(config, bestseq, a.FO_intervals, b.pvals<hmm_1stlevel.assym_ttest.alpha_thresh, color_scheme);
     end
 elseif whichstudy==7
   for iSes=1:config.nSes
     [FO_intervals_ses,~,t_intervals_ses,~] = computeLongTermAsymmetry(vpath_ses(iSes:config.nSes:end),hmmT_ses(iSes:config.nSes:end),K,[],[],[],false);
     hmm_1stlevel.per_ses.FO_intervals(:,:,:,iSes,:) = FO_intervals_ses;
     hmm_1stlevel.per_ses.t_intervals(iSes,:,:) = t_intervals_ses;
-    hmm_1stlevel.per_ses.cycle_metrics(iSes) = compute_tinda_metrics(config, bestseq, angleplot, FO_intervals_ses, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
+    hmm_1stlevel.per_ses.cycle_metrics(iSes) = compute_tinda_metrics(config, bestseq, FO_intervals_ses, hmm_1stlevel.assym_ttest.sigpoints, color_scheme);
   end
 end
 
@@ -431,7 +431,7 @@ if whichstudy==7 || whichstudy==8
   hmm_1stlevel.trial_glm.assym_ttest.alpha_thresh = alpha_thresh;
   hmm_1stlevel.trial_glm.assym_ttest.sigpoints = hmm_1stlevel.trial_glm.assym_ttest.pvals<alpha_thresh;
   hmm_1stlevel.trial_glm.bestsequencemetrics = optimiseSequentialPattern(hmm_1stlevel.trial_glm.FO_intervals);
-  hmm_1stlevel.trial_glm.cycle_metrics = compute_tinda_metrics(config, hmm_1stlevel.trial_glm.bestsequencemetrics{1}, circle_angles(hmm_1stlevel.trial_glm.bestsequencemetrics{1}), hmm_1stlevel.trial_glm.FO_intervals, hmm_1stlevel.trial_glm.assym_ttest.sigpoints, color_scheme);
+  hmm_1stlevel.trial_glm.cycle_metrics = compute_tinda_metrics(config, hmm_1stlevel.trial_glm.bestsequencemetrics{1}, hmm_1stlevel.trial_glm.FO_intervals, hmm_1stlevel.trial_glm.assym_ttest.sigpoints, color_scheme);
 end
 
 %% plot HMM summary statistics
