@@ -264,7 +264,7 @@ h.Ticks = [0 1];
 h.TickLabels = {'low', 'high'}
 text(1.1, 1.2, 'FO')
 axis off
-% save_figure([config.figdir,'figure5_correlations/5_metastate_profile'], [], false);
+ save_figure([config.figdir,'figure5_correlations/5_metastate_profile']);
 %% check for correlation with cycle rates:
 W = 125;
 
