@@ -13,6 +13,8 @@ for whichstudy=[1,6,3]
     
     if strcmp(config.reordering_states, 'coherence')
         optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_coherence' ,'.mat'];
+    elseif strcmp(config.reordering_states, 'study1matched')
+        optimalseqfile = [config.resultsdir,'bestseq',int2str(whichstudy),'_study1matched' ,'.mat'];
     else
         optimalseqfile = [config.hmmfolder,'bestseq',int2str(whichstudy),'.mat'];
     end
@@ -32,11 +34,11 @@ for whichstudy=[1,6,3]
             ax(k, cnt1) = axes('Position', [0.51+(cnt1-1)/6, .85-.9*(((k-1)-K/2)/(K/2)), 0.85*1/6, 1.1*1/K]);
         end
         mask = zeros(K);
-        mask(bestseq_clockwise(k), :) = 1;
-        mask(:, bestseq_clockwise(k)) = 1;
+        mask((k), :) = 1;
+        mask(:, (k)) = 1;
         cyclicalstateplot(bestseq, hmm_1stlevel.cycle_metrics.mean_direction, sigpoints.*mask, color_scheme, false,[],false,[],200);
         if whichstudy==6
-            title({sprintf("%d o'clock", clock(k)), ''})
+            title({sprintf("State %d", k), ''})
         end
     end
     
