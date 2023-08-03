@@ -526,6 +526,25 @@ if whichstudy<4
     FO_meta(subnum,:) = getFractionalOccupancy(Gamtemp,length(Gamtemp));
     cyctimes{subnum} = cycletimes;
 
+    % how many microstates are typically traversed in each cycle?
+    vpTemp = vpath{subnum};
+    if length(T_poiss)~=config.nSj
+      error('Need to realign state timecourses for sub segments')
+    else
+      vpTemp = vpTemp(ceil(W/2):end-floor(W/2));
+      if length(vpTemp)~=length(Gamtemp)
+        error('Sizes misaligned')
+      end
+    end
+    if whichstudy==3
+      num_transitions = getMicroStateCycleVisits(Gamtemp,T_poiss([1:3]+(subnum-1)*3),vpTemp);
+    else
+      [num_transitions,microsequences{subnum}] = getMicroStateCycleVisits(Gamtemp,T_poiss(subnum),vpTemp);
+    end
+    microtransitions_all{subnum} = num_transitions;
+    microtransitions_mu(subnum,:) = mean(num_transitions);
+    microtransitions_median(subnum,:) = median(num_transitions);
+
     if whichstudy==3 % get session by session detail:
       for subnum = 1:config.nSj
         for isession=1:3
@@ -556,7 +575,28 @@ else
       for ik=1:length(lifetimes_meta{subnum})
         lifetimes_meta{subnum}{ik} = lifetimes_meta{subnum}{ik}./config.sample_rate;
       end
-    end
+      
+
+      % how many microstates are typically traversed in each cycle?
+      vpTemp = load(mat_files_orth{subnum},'vpath','T');
+      vpTemp = vpTemp.vpath;
+      if length(T_poiss)~=config.nSj
+        error('Need to realign state timecourses for sub segments')
+      else
+        vpTemp = vpTemp(ceil(W/2):end-floor(W/2));
+        if length(vpTemp)~=length(Gamtemp)
+          error('Sizes misaligned')
+        end
+      end
+      if whichstudy==3
+        num_transitions = getMicroStateCycleVisits(Gamtemp,T_poiss([1:3]+(subnum-1)*3),vpTemp);
+      else
+        [num_transitions,microsequences{subnum}] = getMicroStateCycleVisits(Gamtemp,T_poiss(subnum),vpTemp);
+      end
+      microtransitions_all{subnum} = num_transitions;
+      microtransitions_mu(subnum,:) = mean(num_transitions);
+      microtransitions_median(subnum,:) = median(num_transitions);
+    end  
 
   else
     figdir = [config.figdir,'4_covariates_W',int2str(W),'_overlappingWindows/'];
@@ -581,6 +621,37 @@ else
       for ik=1:length(lifetimes_meta{subnum})
         lifetimes_meta{subnum}{ik} = lifetimes_meta{subnum}{ik}./config.sample_rate;
       end
+
+      % how many microstates are typically traversed in each cycle?
+      vpTemp = load(mat_files_orth{subnum},'vpath','T');
+
+      % correct Gamma for points that were erronesouly enteres:
+      temp2 = load(mat_files_poiss{subnum});
+      to_remove = sum(temp2.X')==0;
+      Gamtemp2 = Gamma(~to_remove,:);
+      T_amended = vpTemp.T-14; %-W+1
+      if length(vpTemp.vpath)~=sum(T_amended)
+        error('Not aligned!!!')
+      end
+      vpTemp = vpTemp.vpath;
+      t_start = ceil(W/2);
+      t_end = -ceil(W/2)+1;
+      vpTemp2 = [];
+      for i=1:length(T_amended)
+        t_end = t_end + T_amended(i);
+        vpTemp2 = [vpTemp2; vpTemp(t_start:t_end)];
+        t_start = t_start + T_amended(i);
+      end
+      T_amended = T_amended-W+1;
+      if length(vpTemp2)~=sum(T_amended)
+        error('Need to realign state timecourses for sub segments')
+      end
+      [num_transitions,microsequences{subnum}] = getMicroStateCycleVisits(Gamtemp2,T_amended,vpTemp2);
+
+      microtransitions_all{subnum} = num_transitions;
+      microtransitions_mu(subnum,:) = mean(num_transitions);
+      microtransitions_median(subnum,:) = median(num_transitions);
+
       % also get minute by minute detail:
       for imin=1:5
         startseg = find(cumsum(T)>(imin-1)*samp_2minute,1)-1;
@@ -619,6 +690,11 @@ hmm_2ndlevel.FO = FO_meta;
 hmm_2ndlevel.cyctimes_all = cyctimes;
 hmm_2ndlevel.LT_all = lifetimes_meta;
 
+hmm_2ndlevel.microtransitions_all = microtransitions_all;
+hmm_2ndlevel.microtransitions_mu = microtransitions_mu;
+hmm_2ndlevel.microtransitions_med = microtransitions_median;
+hmm_2ndlevel.microsequences = microsequences;
+
 if whichstudy==3
   hmm_2ndlevel.cycletime_mu_sess = cycletime_mu_sess;
   hmm_2ndlevel.cycletime_std_sess = cycletime_std_sess;
@@ -631,9 +707,253 @@ elseif whichstudy==4 || whichstudy==6
   hmm_2ndlevel.cycletime_std_min=cycletime_std_min;
 end
 
-
-
 save(config.metricfile,'hmm_2ndlevel','-append');
 
+%% run some second level metastate stats:
 
+N = length(hmm_2ndlevel.cyctime_mu);
+%plot(hmm_2ndlevel.cyctimes_all{randi(N)})
+outliers = abs(1./hmm_2ndlevel.cyctime_mu(:,1) - mean(1./hmm_2ndlevel.cyctime_mu(:,1))) > 2*std(1./hmm_2ndlevel.cyctime_mu(:,1));
+
+figure('Position',[588 326 274 471]);
+distributionPlot(hmm_2ndlevel.microtransitions_mu(~outliers,:),'showMM',2,'color',{color_scheme{1:size(hmm_1stlevel.FO,2)}})
+%title('Expected state visits per cycle');
+plot4paper('','Expected Number of state visits per cycle');grid on;
+set(gca,'XTickLabel',{'Total state visits','Unique state visits'})
+set(gca,'XTickLabelRotation',45)
+%set(gca,'YLim',[0 YL],'FontSize',fontsize,'FontSize',fontsize);
+print([config.figdir,'Fig4A_StateVisitsPerCycle_window',int2str(W),'_K',int2str(K)],'-dpng');
+
+figure('Position',[588 63 412 735]);
+color_scheme{13} = [0 0 0]
+%subplot(211);
+distributionPlot([hmm_1stlevel.LT_mu(~outliers,:),hmm_2ndlevel.cyctime_mu(~outliers,:)] ./ config.sample_rate * 1000,'showMM',2,'color',{color_scheme{:}})
+title('Life Times');plot4paper('','Time (ms)');grid on;
+YL = 1.1*prctile(hmm_1stlevel.LT_mu(:),97.5)./ config.sample_rate * 1000;
+for i=1:12;labels{i} = ['State',int2str(i)];end
+labels{13} = 'CycleTime';
+set(gca,'XTickLabel',labels)
+print([config.figdir,'Fig4B_CycleTimesVsLifeTimes',int2str(W),'_K',int2str(K)],'-dpng');
+
+%% how many microstates are typically visited in each cycle?
+
+boxplot(microtransitions_median)
+
+%% do consecutive traversals tend to visit the same states?
+clear stats s
+
+for subnum = 1:config.nSj
+    fprintf(['\nRunning subj', int2str(subnum),'\n'])
+    for T = 1:20
+        for i_perm=1:100
+            temp = hmm_2ndlevel.microsequences{subnum};
+            N = length(temp);
+            if i_perm==1
+                ordering = 1:N;
+            else
+                ordering = randperm(N);
+            end
+            L_common = zeros(N-T,1);
+            L_unique = zeros(N-T,1);
+            for n = 1:(N-T)
+                L_common(n) = length(intersect(temp{ordering(n)},temp{ordering(n+T)}));
+                L_unique(n) = length(union(temp{ordering(n)},temp{ordering(n+T)}));
+            end
+            stats(subnum,i_perm,T) = mean(L_common ./ L_unique);
+        end
+    end
+end
+
+%% 
+figure('Position',[588 63 412 735]);
+temp = {stats(~outliers,1,1),squash(stats(~outliers,2:end,1))};
+p = anova1([temp{1};temp{2}(:)],[ones(length(temp{1}),1);2*ones(length(temp{2}(:)),1)],'off')
+distributionPlot(temp,'showMM',2,'color',{color_scheme{[1,3]}})
+title(['p=',num2str(p,3)]);plot4paper('','Proportion common states visited');grid on;
+set(gca,'XTickLabel',{'Consecutive cycles','Nonconsecutive cycles'})
+print([config.figdir,'Fig4D_ConsecutivePattern1',int2str(W),'_K',int2str(K)],'-dpng');
+
+%%
+figure;
+shadedErrorBar(1:20,squeeze(nanmean(stats(~outliers,1,:),1)),squeeze(nanstd(stats(~outliers,1,:),[],1)./sqrt(subnum)));
+hold on;
+for i_perm = 2:100
+    s(i_perm-1,:) = squeeze(nanmean(stats(~outliers,i_perm,:),1));
+end
+plot(1:20,repmat(max(s(:)),1,20),'r--');
+h(1) = plot(nan,nan,'k-');
+h(2) = plot(1:20,repmat(min(s(:)),1,20),'r--');
+plot4paper('Cycles N distance apart','Proportion common states visited')
+legend(h,{'Observed statistic','p<5e-4'})
+print([config.figdir,'Fig4D_ConsecutivePattern2',int2str(W),'_K',int2str(K)],'-dpng');
+
+%%
+
+if whichstudy==1
+    [info,varnames] = MEGUK_getparticipantinfo();
+    subj_age = info(:,11);
+    subj_gender = info(:,12); % 1 denotes male, 2 denotes female
+    subj_RTs = info(:,3);
+elseif whichstudy==3
+    [info,varnames] = HCP_getparticipantinfo(config);
+    subj_age = info(:,4);
+    subj_gender = info(:,3); % 1 denotes female
+    subj_RTs = info(:,end);
+elseif whichstudy==4
+    info = camcan_getparticipantinfo(config);
+    subj_age = info(:,1);
+    subj_gender = info(:,3); % ??
+    subj_RTs = info(:,5);
+    
+end
+info = [subj_age,subj_gender,subj_RTs];
+
+figure();
+i=3
+teststat = stats(~outliers,1,1) - max(stats(~outliers,2:end,1),[],2)
+scatter(info(~outliers,i),teststat)
+[C,P] = corr(info(~outliers,i),teststat)
+
+%% histogram of state transitions in phase space:
+
+bestseq = bestsequencemetrics{1}; % MATS: flagging you to check this bit please. Can't remember which of the optimals we chose in the end
+    
+disttoplot_manual = zeros(12,2);
+for i=1:12
+    temp = exp(sqrt(-1)*(i+2)/12*2*pi);
+    disttoplot_manual(bestseq(i),:) = [real(temp),imag(temp)];
+end
+    %circleposition = exp(j*(pi/2-[0:11]*2*pi/12));
+    %circleposition = circleposition(bestseq);
+    circleposition = disttoplot_manual(:,1) + sqrt(-1)*disttoplot_manual(:,2);
+phaseshiftcounter = zeros(config.nSj,12);
+phases = linspace(-pi,5*pi/6,12);
+jointcounter = zeros(12,12,config.nSj);
+for subnum=1:config.nSj
+
+    if whichstudy==4
+        clear vpath;
+        vpTemp = load(mat_files_orth{subnum},'vpath','T');
+        vpath{subnum} = vpTemp.vpath;
+    end
+    transitions = find(diff(vpath{subnum})~=0);
+    phaseshift = zeros(length(transitions),1);
+    for i=1:length(transitions)
+        phase_t = angle(circleposition(vpath{subnum}(transitions(i))));
+        phase_tplus1 = angle(circleposition(vpath{subnum}(transitions(i)+1)));
+        phaseshift(i) = phase_tplus1 - phase_t;
+    end
+    % unwrap phases onto same scale:
+    phaseshift(phaseshift > pi-0.01) = phaseshift(phaseshift > pi-0.01)-2*pi;
+    phaseshift(phaseshift < -pi-0.01) = phaseshift(phaseshift < -pi-0.01)+2*pi;
+    phaseshiftcounter(subnum,:) = hist(phaseshift,phases);
+
+    % track phase shifts for consecutive transitions:
+    for i=1:12
+        pointsin = phaseshift(1:end-1) >= phases(i) - 0.1 & phaseshift(1:end-1) <= phases(i) + 0.1;
+        pointsin = find(pointsin);
+        for i2 = 1:12
+            jointcounter(i,i2,subnum) = sum(phaseshift(pointsin + 1) >= phases(i2) - 0.1 & phaseshift(pointsin + 1) <= phases(i2) + 0.1);
+        end
+    end
+end
+phaseshiftcounter = phaseshiftcounter ./ repmat(sum(phaseshiftcounter,2),1,12);
+figure();
+bar(phases,mean(phaseshiftcounter))
+plot4paper('Phase Shift','Proportion of microstate transitions')
+labs = {'-\pi','-5\pi/6','-2\pi/3','-\pi/2','-\pi/3','-\pi/6','0','\pi/6','\pi/3','\pi/2','2\pi/3','5\pi/6'}
+set(gca,'XTick',phases,'XTickLabel',labs)
+title('Histogram of Microstate Transition Phase Shifts')
+print([config.figdir,'Fig4C_PhaseShifts',int2str(W),'_K',int2str(K)],'-dpng');
+
+%% show effect of age as well:
+%B = pinv([ones(config.nSj,1),subj_age])*phaseshiftcounter
+for i=1:12;
+    phaselabels{i} = num2str(phases(i),2);
+end
+%tbl = table([phaseshiftcounter,subj_age],'VariableNames',{phaselabels{:},'Age'})
+clear B
+for i=1:12
+    tbl = table(phaseshiftcounter(:,i),subj_age,'VariableNames',{'Phase','Age'})
+    mdl = fitlm(tbl,'Phase ~ Age')
+    pvals(i) = mdl.Coefficients.pValue(2);
+    B(i) = mdl.Coefficients.Estimate(2);     
+end
+figure('Position',[200 324 815 376]);
+subplot(121);
+for i=1:12
+    if pvals(i)<0.05/12
+        col = 'green';
+    else
+        col = 'blue';
+    end
+    bar(phases(i),B(i),0.8*pi/6,'green');
+    hold on
+end
+h(1) = bar(nan,nan,'green');
+h(2) = bar(nan,nan,'blue');
+legend(h,{'p<5e-3','N.S.'})
+plot4paper('Phase Shift','Age Cofficient')
+labs = {'-\pi','-5\pi/6','-2\pi/3','-\pi/2','-\pi/3','-\pi/6','0','\pi/6','\pi/3','\pi/2','2\pi/3','5\pi/6'}
+set(gca,'XTick',phases,'XTickLabel',labs)
+%title('Histogram of Microstate Transition Phase Shifts')
+% fit multinomial model - can we predict age:
+tbl = table(phaseshiftcounter(:,1),subj_age,'VariableNames',{'Phase1','Age'})
+for i=2:12
+    name = ['Phase',num2str(i)];
+    tbl.(name) = phaseshiftcounter(:,i)
+end
+mdl = fitlm(tbl,'Age ~ Phase1 + Phase2 + Phase3 + Phase4 + Phase5 + Phase6 + Phase7 + Phase8 + Phase9 + Phase10 + Phase11 + Phase12');
+
+subplot(122)
+scatter(subj_age,mdl.predict,'filled')
+XL = xlim();hold on;
+plot(XL,XL,'Color',[1 1 1]*0.8,'LineWidth',0.8)
+plot4paper('Actual Age','Predicted Age')
+title(['p=6.2e-15'])
+var_expl = [var(subj_age) - var(mdl.predict-subj_age)] ./ var(subj_age)
+print([config.figdir,'Fig4C_PhaseShifts_Age_',int2str(W),'_K',int2str(K)],'-dpng');
+
+%% Gender:
+
+clear B
+for i=1:12
+    tbl = table(phaseshiftcounter(:,i),normalize(subj_gender),'VariableNames',{'Phase','Gender'})
+    mdl = fitlm(tbl,'Phase ~ Gender')
+    pvals(i) = mdl.Coefficients.pValue(2);
+    B(i) = mdl.Coefficients.Estimate(2);     
+end
+figure('Position',[200 324 815 376]);
+subplot(121);
+bar(phases,B)
+plot4paper('Phase Shift','Gender effect')
+
+set(gca,'XTick',phases,'XTickLabel',labs)
+%title('Histogram of Microstate Transition Phase Shifts')
+% fit multinomial model - can we predict age:
+tbl = table(phaseshiftcounter(:,1),normalize(subj_gender),'VariableNames',{'Phase1','Gender'})
+for i=2:12
+    name = ['Phase',num2str(i)];
+    tbl.(name) = phaseshiftcounter(:,i)
+end
+mdl = fitlm(tbl,'Gender ~ Phase1 + Phase2 + Phase3 + Phase4 + Phase5 + Phase6 + Phase7 + Phase8 + Phase9 + Phase10 + Phase11 + Phase12');
+
+subplot(122)
+scatter(normalize(subj_gender),mdl.predict,'filled')
+plot4paper('Gender','Predicted Age')
+
+%% Histogram phase shifts t and t+1 timesteps apart:
+figure();
+imagesc(sum(jointcounter,3))
+
+%%
+[A,B] = pca(phaseshiftcounter)
+
+figure()
+for i=1:4
+    subplot(1,4,i)
+    bar(A(:,i))
+end
+
+[C,P] = corr(B(:,2),subj_age)
 
