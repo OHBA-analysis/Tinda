@@ -36,7 +36,18 @@ for i2=1:length(myperms)
 
         for i3=1:3  
             sequencemetric{i3}(i2,i) = imag(sum(sum(angleplot.*metric{i3})));
-        end      
+        end     
+        % TODO: the largest weight is now given to a transition 3 places away. What if we use steps instead?
+        % work in progress
+        %{
+        dist=[0 -5:1:-1 0 1:5];
+        for k=1:12
+          Q(k,manualorder) = circshift(dist,k-1);
+        end
+        for i3=1:3  
+            sequencemetric{i3}(i2,i) = sum(sum(Q.*metric{i3}));
+        end
+}
     end
 end
 for i=1:3
