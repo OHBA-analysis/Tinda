@@ -20,13 +20,13 @@ end
 fig = setup_figure([], 2,0.4); clear ax
 ax(1) = axes('Position', [-.03, 0.1, 0.45, 0.7]);
 cyclicalstatesubplot(bestseq,mean_direction_p,a.pvals<hmm_1stlevel.assym_ttest.alpha_thresh);
-title({'Rotational momentum', sprintf('= %0.3f', mean(rotational_momentum_p, 'omitnan')/hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum),''})
+title({sprintf('S = %0.3f', mean(rotational_momentum_p, 'omitnan')/hmm_1stlevel.cycle_metrics.max_theoretical_rotational_momentum),''})
 
 ax(2) = axes('Position', [0.5, 0.15, 0.45, 0.7]);
 distributionPlot(ITmerged,'showMM',2,'color',{color_scheme{1:size(FO,2)}});
 
 set(gca,'YLim',[0 1.1*max(ITmerged(:))])
-title('Interval times > 2 sec');xlabel('RSN-State'), ylabel('Interval time (sec)');grid on;
+title('Interval times > 2 sec');xlabel('State'), ylabel('Interval time (sec)');grid on;
 set_font(10, {'title', 'label'})
 
 save_figure([config.figdir, 'figure_supp_tinda_heartbeat/','2supp_Cyclicalpatterns_greaterthan2sec'])
