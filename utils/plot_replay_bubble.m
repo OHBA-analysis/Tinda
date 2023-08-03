@@ -1,8 +1,8 @@
 % load('/Users/matsvanes/Downloads/replay_bubblechart.mat')
-load('/Users/matsvanes/Downloads/tinda_replay_perc5_2.mat')
-addpath('utils/')
-addpath('/Users/matsvanes/Documents/Werk/scripts/sigstar')
 whichstudy=1;
+config = getStudyDetails(whichstudy)
+load([config.resultsdir, 'tinda_replay_perc5.mat'])
+
 color_scheme = colorscheme(whichstudy);
 
 
@@ -11,9 +11,9 @@ for k=1:2
 end
 
 %% these are the percentiled versions
-
-
-
+for k=1:12
+color_scheme_black{k} = 0*color_scheme{k};
+end
 for d=1
 
   for istudy=1:2
@@ -23,9 +23,9 @@ for d=1
       IT(ints) = round(mean(squash(cellfun(@mean, replay.K13.perc.t_intervals{ints}))));
     end
 
-
+    
     ax(istudy) = axes('Position', [0.075 .1, .2, .8]);
-    boxplot_with_scatter(assym{istudy}, color_scheme);
+    boxplot_with_scatter(assym{istudy}, color_scheme_black);
     for k=1:12
       group{k} = [k k];
     end
@@ -49,7 +49,7 @@ for d=1
 
     %
     ax(istudy+3) = axes('Position', [.25 .15 .8 .75]);
-    cyclicalstateplot(replay.K13.perc.bubbleplot.bestseq_nott, zeros(12), zeros(12), color_scheme, false)
+    cyclicalstateplot(replay.K13.perc.bubbleplot.bestseq_nott, zeros(12), zeros(12), color_scheme_black, false)
     ax(istudy+2) = axes('Position', [.25 .175 .8 .7]);
 
     cmap = replay.K13.perc.bubbleplot.cmap;
@@ -141,9 +141,9 @@ for d=1
     cb.Label.FontSize=14;
     cb.Label.FontWeight = 'bold';
     if d==1
-      fname = '/Users/matsvanes/Documents/Werk/Tinda/Study1/figures/replay/bubbleplot_replay_interval_study';
+      fname = [config.resultsdir, 'figures/replay/bubbleplot_replay_interval_study'];
     else
-      fname = '/Users/matsvanes/Documents/Werk/Tinda/Study1/figures/replay/bubbleplot_state_interval';
+      fname = [config.resultsdir, 'figures/replay/bubbleplot_state_interval'];
     end
 
     save_figure([fname num2str(istudy)],[],false)
