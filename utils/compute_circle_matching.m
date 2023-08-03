@@ -1,4 +1,4 @@
-studies = [1,3,6,7,8];
+studies = [1,3,6,7];
 studylabel{1} = 'MEG UK';
 studylabel{3} = 'HCP';
 studylabel{6} = 'Cam-CAN';
