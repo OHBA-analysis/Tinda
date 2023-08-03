@@ -4,34 +4,39 @@ fig = setup_figure([],2,.9);
 Xtmp = zeros(size(X));
 Xtmp = X(:,bestseq);
 X=Xtmp;
-try smoothing=cfg.smoothing; catch,  smoothing = [5,1]; end
+try smoothing=cfg.smoothing; catch,  smoothing = false; end
+try cmap=cfg.cmap; catch, cmap=inferno; end
 %% polarplot
 ax(1) = axes('Position', [.08775 .075 .725 .8]);
-X = imgaussfilt(X, smoothing, 'Padding', 'circular');
-polarplot3d(flipud(circshift([X],3,2)), 'PolarDirection', 'ccw','AngularRange', [0 2*pi]-pi/12,'TickSpacing', 360,'GridStyle', '-', 'PolarGrid', {0 0},'MeshScale', [1 1]-1./size(X));
+
+if smoothing
+  X = imgaussfilt(X, smoothing, 'Padding', 'circular');
+end
+polarplot3d(flipud(circshift([X],3,2)), 'PolarDirection', 'ccw','AngularRange', [0 2*pi]-pi/12,'TickSpacing', 360,'GridStyle', '-', 'PolarGrid', {0 0},'MeshScale', [1 1]-1./((size(X)./[1 1])),'InterpMethod', 'nearest');
+
 if isfield(cfg, 'clim')
   CL = cfg.clim;
-  clim(CL);
+  caxis(CL);
 elseif sign(min(X(:))) ~= sign(max(X(:)))
   CL = [-1 1]* max(abs(X(:)));
-  clim(CL);
+  caxis(CL);
 else
-  CL = clim;
+  CL = caxis;
 end
 view([0,90])
 axis off
 box off
 % colormap((brewermap(256, '')))
-colormap(inferno)
+colormap(cmap)
 %% colorbar
-ax(4) = axes('Position', [.65 .1 .3 .8]);
+ax(4) = axes('Position', [.65 .175 .3 .6]);
 tmp=imagesc(X, CL);
 cb = colorbar;
 tmp.Visible='off';
 box off, axis off
 cb.Label.String = cfg.cblabel;
 cb.Label.FontSize = 12;
-cb.FontSize = 10;
+cb.FontSize = 12;
 % cb.Limits = [min(X(:)), max(X(:))];
 
 %% cycle plot
@@ -66,9 +71,10 @@ else
   ax(3) = axes('Position',[.45 0.475 0.345, 0.001]), plot(cfg.timeaxis(1):cfg.timeaxis(2), 0:0);
 
 end
-ax(3).FontSize=10;
+tmp=ax(3).XTickLabel(1);
+ax(3).XTick(1) = 0.95*ax(3).XTick(1);
+ax(3).XTickLabel(1) = tmp;
+ax(3).FontSize=12;
 % ax(3).Color = 'w';
-set(gca,'XColor',[1 1 1]);
+% set(gca,'XColor',[1 1 1]);
 xlabel(cfg.timelabel)
-
-
