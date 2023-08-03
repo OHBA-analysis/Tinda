@@ -13,7 +13,7 @@ if config.nSj==600 % Matlab Fit
         end
     end
 elseif config.nSj==612 % Python Fit
-    q=tdfread('/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study4/ChetFit/camcan_all.csv');
+    q=tdfread([config.resultsdir, 'camcan_all.csv']);
     q=cellstr(q.x0x2CID0x2C0x22Sex_0x2810x3Dmale0x2C_20x3Dfemale0x290x220x2CAge);
     
     cell_dat_split = cellfun(@(x)regexp(x,',','split'),q,'UniformOutput',0);

@@ -38,7 +38,7 @@ if config.nSj==600 % Matlab Fit
     
     
 elseif config.nSj==612 % Python fit
-    q=tdfread('/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study4/ChetFit/camcan_all.csv');
+    q=tdfread([c.resultsdir, 'camcan_all.csv']);
     q=cellstr(q.x0x2CID0x2C0x22Sex_0x2810x3Dmale0x2C_20x3Dfemale0x290x220x2CAge);
     
     participantinfo = tdfread(fullfile('/ohba/pi/mwoolrich/datasets/CamCan_2021', 'ParticipantCovariates/participants.tsv'));
