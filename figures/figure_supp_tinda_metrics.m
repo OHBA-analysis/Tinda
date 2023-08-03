@@ -280,7 +280,7 @@ for ik = 1:length(measures)
     title(sprintf('State %d', whichstate))
     box off
   end
-  suptitle(ttl{ik})
+  sgtitle(ttl{ik})
   save_figure([config.figdir, 'figure_supp_tinda_metrics/',sprintf('2supp_cycle_metrics_vs_sim_%s', measures{ik})])
 end
 
