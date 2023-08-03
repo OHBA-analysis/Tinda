@@ -28,8 +28,6 @@ for i=1:12
   disttoplot_manual(ordering(i),:) = [real(temp),imag(temp)];
 end
 
-% ordering = [ordering(1),fliplr(ordering(2:end))]; % ensures rotates in clockwise direction
-
 for k_to_plot = plotstates
   if length(plotstates)>1
     subplot(row,col,k_to_plot);
@@ -101,6 +99,5 @@ for k_to_plot = plotstates
   end
   axis square
   axis off
-  title({sprintf('State %d',k_to_plot), ''})
 end
 end
