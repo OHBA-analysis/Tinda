@@ -116,7 +116,6 @@ end
 %}
 get_replayData
 
-
 config.resultsdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/';
 config.figdir = '/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study1/figures/replay/';
 
@@ -274,6 +273,8 @@ for perc=1%[1,5]
     end
     G_evoked = squeeze(nanmean(reshape(G_evoked, 251, 12, 2, []),3));
     
+    save([config.resultsdir, 'replay_evoked_gamma_perc' perc], 'G_evoked')
+
 
 cfg=[];
 cfg.timeaxis = [-.5 .5];
