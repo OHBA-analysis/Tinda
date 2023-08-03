@@ -76,7 +76,7 @@ elseif whichstudy==4 % this the CamCan model fit:
   config.secondlevelmodelfile = fullfile(basedir, 'HMM/secondLevelHMM_Poiss_window17_K3.mat');
   config.Poiss_dir = fullfile(basedir, 'HMM/Poissdata_125_overlappingWindows/');
   config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
-  config.reordering_states = 'study1matched'; 
+  config.reordering_states = 'coherence'; 
 elseif whichstudy==5
   config.nSj = 237/3;
   config.hmmfolder = '/ohba/pi/mwoolrich/datasets/HCP_CH_2022/ve_output_rest/';
@@ -104,7 +104,7 @@ elseif whichstudy==6 % this is Chet's CamCan model fit:
   config.participantcovariates = basedir;
   config.participantfile = fullfile(basedir, 'camcan_all.csv');
   config.secondlevelmodelfile = fullfile(basedir, 'secondLevelHMM_stoch_Poiss_window125_K3_overlappingWindows.mat');
-  config.Poiss_dir = fullfile(basedir, 'Poissdata_125_overlappingWindows/');
+  config.Poiss_dir = fullfile(basedir, 'Poissdata_16_overlappingWindows/');
   config.metricfile = [config.resultsdir,'HMMsummarymetrics.mat'];
   config.reordering_states = 'study1matched'; 
 elseif whichstudy==7 % Python WakeHen fit
@@ -119,6 +119,7 @@ elseif whichstudy==7 % Python WakeHen fit
   config.prepdatafile = [];
   config.metricfile = [config.hmmfolder,'HMMsummarymetrics.mat'];
   config.reordering_states = 'study1matched'; % can be 'replay' (originally), 'study1matched'
+  config.Poiss_dir = fullfile(basedir, 'Poissdata_16_overlappingWindows/');
   elseif whichstudy==8 % Python CamCan fit, refitted on WakeHen 
     basedir='/ohba/pi/mwoolrich/mvanes/Projects/Tinda/Study8/';
   config.nSj = 19;
